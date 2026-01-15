@@ -13,43 +13,7 @@
   #top-loader-bar {
     height: 100%;
     width: 0%;
-    background: linear-gradient(to right, #0a9875, #0cae86);
-    box-shadow: 0 0 15px rgba(10, 152, 117, 0.7);
-    transition: width 0.2s ease;
-  }
-  
-  #top-loader.loading {
-    visibility: visible;
-  }
-  
-  #top-loader.loading #top-loader-bar {
-    animation: loading-animation 1.5s ease-in-out infinite;
-  }
-  
-  @keyframes loading-animation {
-    0% {
-      width: 0%;
-      left: 0;
-    }
-    50% {
-      width: 70%;
-    }
-    100% {
-      width: 100%;
-    }
-  }
-  
-  /* For completed loading */
-  #top-loader.complete #top-loader-bar {
-    width: 100%;
-    transition: width 0.3s ease;
-    opacity: 1;
-    animation: fade-out 0.5s ease-out 0.3s forwards;
-  }
-  
-  @keyframes fade-out {
-    from { opacity: 1; }
-    to { opacity: 0; }
+    background: #38bdf8;
   }
 </style>
 
@@ -63,22 +27,16 @@
     loader: document.getElementById('top-loader'),
     bar: document.getElementById('top-loader-bar'),
     
-    // Start the loading animation
+    // Show the loading bar
     start: function() {
-      this.loader.classList.add('loading');
-      this.loader.classList.remove('complete');
+      this.loader.style.visibility = 'visible';
+      this.bar.style.width = '100%';
     },
     
-    // Complete the loading animation
+    // Hide the loading bar
     complete: function() {
-      this.loader.classList.remove('loading');
-      this.loader.classList.add('complete');
-      
-      // Reset after animation completes
-      setTimeout(() => {
-        this.loader.classList.remove('complete');
-        this.bar.style.width = '0%';
-      }, 800);
+      this.loader.style.visibility = 'hidden';
+      this.bar.style.width = '0%';
     },
     
     // Set a specific percentage (0-100)
@@ -92,9 +50,9 @@
   
   // Example usage for page navigation
   document.addEventListener('DOMContentLoaded', function() {
-    // Auto-complete on initial page load
+    // Show then hide on initial page load
     topLoader.start();
-    setTimeout(() => topLoader.complete(), 500);
+    topLoader.complete();
     
     // Add event listeners to links for navigation loading
     document.querySelectorAll('a:not([target="_blank"])').forEach(link => {

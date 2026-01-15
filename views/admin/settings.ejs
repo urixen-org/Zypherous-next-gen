@@ -1,0 +1,522 @@
+<%- include('../components/head') %>
+
+<body class="min-h-screen bg-neutral-950 text-slate-100">
+  <div>
+    <%- include('../components/adminnav') %>
+    <div class="md:pl-64 flex flex-col flex-1 min-h-screen">
+      <%- include('../components/header') %>
+      <main class="flex-1 pb-8">
+        <div class="py-4 md:py-6">
+          <% /* Skeleton loader, lasts about 0.3s to let the page content load */ %>
+          <%- include('../components/skeleton') %>
+          <div class="hidden max-w-screen-2xl mx-auto px-4 sm:px-6 md:px-8" id="content">
+            <div class="bg-neutral-900 rounded-sm md:rounded-sm p-4 md:p-6 mb-4 md:mb-6 border-t border-neutral-800/70 shadow-sm">
+              <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+                <div class="mb-3 md:mb-0">
+                  <h2 class="text-lg md:text-xl font-semibold text-white tracking-tight">System Settings</h2>
+                  <p class="text-xs md:text-sm font-normal text-slate-400 mt-1">Review your current configuration and core toggles.</p>
+                </div>
+              </div>
+            </div>
+
+            <% if (req.query.err) { %>
+            <div class="rounded-sm md:rounded-sm border border-neutral-800/70 p-4 mb-5 bg-red-500/10">
+              <div class="flex">
+                <div class="flex-shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                  </svg>
+                </div>
+                <div class="ml-3">
+                  <p class="text-sm text-white">Error code: <code class="bg-white/10 px-1.5 py-0.5 rounded-sm"><%= req.query.err %></code></p>
+                </div>
+              </div>
+            </div>
+            <% } %>
+
+            <% if (req.query.success) { %>
+            <div class="rounded-sm md:rounded-sm border border-neutral-800/70 p-4 mb-5 bg-sky-500/10">
+              <div class="flex">
+                <div class="flex-shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-sky-500" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                  </svg>
+                </div>
+                <div class="ml-3">
+                  <p class="text-sm text-white"><%= req.query.success %></p>
+                </div>
+              </div>
+            </div>
+            <% } %>
+
+            <% if (pterodactyl.root_admin == true) { %>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div class="bg-neutral-900/60 rounded-sm p-5 border-t border-neutral-800/70 shadow-sm">
+                <h3 class="text-base font-semibold text-white">Core</h3>
+                <p class="text-xs text-slate-400 mt-1">Primary application settings.</p>
+                <div class="mt-4 space-y-3 text-sm">
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Name</span>
+                    <span class="text-white font-medium"><%= adminSettings.core.name %></span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Version</span>
+                    <span class="text-white font-medium"><%= adminSettings.core.version %></span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Timezone</span>
+                    <span class="text-white font-medium"><%= adminSettings.core.timezone %></span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Clusters</span>
+                    <span class="text-white font-medium"><%= adminSettings.core.clusters %></span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Database</span>
+                    <span class="text-white font-medium"><%= adminSettings.core.database %></span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Testing Mode</span>
+                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium <%= adminSettings.core.testing ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/10 text-red-400' %>"><%= adminSettings.core.testing ? 'Enabled' : 'Disabled' %></span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bg-neutral-900/60 rounded-sm p-5 border-t border-neutral-800/70 shadow-sm">
+                <h3 class="text-base font-semibold text-white">Web</h3>
+                <p class="text-xs text-slate-400 mt-1">Public-facing settings and branding.</p>
+                <div class="mt-4 space-y-3 text-sm">
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Site URL</span>
+                    <span class="text-white font-medium"><%= adminSettings.website.url || 'Not set' %></span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Port</span>
+                    <span class="text-white font-medium"><%= adminSettings.website.port %></span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Discord</span>
+                    <span class="text-white font-medium"><%= adminSettings.website.discord %></span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Coins Label</span>
+                    <span class="text-white font-medium"><%= adminSettings.website.coins %></span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Website Secret</span>
+                    <span class="text-white font-medium"><%= adminSettings.secrets.websiteSecret || 'Not set' %></span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Maintenance Mode</span>
+                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium <%= adminSettings.maintenance.enabled ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400' %>"><%= adminSettings.maintenance.enabled ? 'Enabled' : 'Disabled' %></span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bg-neutral-900/60 rounded-sm p-5 border-t border-neutral-800/70 shadow-sm">
+                <h3 class="text-base font-semibold text-white">Access Control</h3>
+                <p class="text-xs text-slate-400 mt-1">Registration and server actions.</p>
+                <div class="mt-4 space-y-3 text-sm">
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Allow New Users</span>
+                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium <%= adminSettings.access.allowNewUsers ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/10 text-red-400' %>"><%= adminSettings.access.allowNewUsers ? 'Enabled' : 'Disabled' %></span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Password Regen</span>
+                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium <%= adminSettings.access.allowRegen ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/10 text-red-400' %>"><%= adminSettings.access.allowRegen ? 'Enabled' : 'Disabled' %></span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Create Servers</span>
+                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium <%= adminSettings.access.serverCreate ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/10 text-red-400' %>"><%= adminSettings.access.serverCreate ? 'Enabled' : 'Disabled' %></span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Modify Servers</span>
+                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium <%= adminSettings.access.serverModify ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/10 text-red-400' %>"><%= adminSettings.access.serverModify ? 'Enabled' : 'Disabled' %></span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Delete Servers</span>
+                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium <%= adminSettings.access.serverDelete ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/10 text-red-400' %>"><%= adminSettings.access.serverDelete ? 'Enabled' : 'Disabled' %></span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Whitelist</span>
+                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium <%= adminSettings.access.whitelistEnabled ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400' %>"><%= adminSettings.access.whitelistEnabled ? 'Enabled' : 'Disabled' %></span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bg-neutral-900/60 rounded-sm p-5 border-t border-neutral-800/70 shadow-sm">
+                <h3 class="text-base font-semibold text-white">Features</h3>
+                <p class="text-xs text-slate-400 mt-1">Coins, AFK, and integration modules.</p>
+                <div class="mt-4 space-y-3 text-sm">
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Coins System</span>
+                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium <%= adminSettings.features.coinsEnabled ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/10 text-red-400' %>"><%= adminSettings.features.coinsEnabled ? 'Enabled' : 'Disabled' %></span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Store</span>
+                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium <%= adminSettings.features.storeEnabled ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/10 text-red-400' %>"><%= adminSettings.features.storeEnabled ? 'Enabled' : 'Disabled' %></span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">AFK Rewards</span>
+                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium <%= adminSettings.features.afkEnabled ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/10 text-red-400' %>"><%= adminSettings.features.afkEnabled ? 'Enabled' : 'Disabled' %></span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Linkvertise</span>
+                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium <%= adminSettings.features.linkvertiseEnabled ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/10 text-red-400' %>"><%= adminSettings.features.linkvertiseEnabled ? 'Enabled' : 'Disabled' %></span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Join for Rewards</span>
+                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium <%= adminSettings.features.j4rEnabled ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/10 text-red-400' %>"><%= adminSettings.features.j4rEnabled ? 'Enabled' : 'Disabled' %></span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Account Switcher</span>
+                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium <%= adminSettings.features.accountSwitcher ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/10 text-red-400' %>"><%= adminSettings.features.accountSwitcher ? 'Enabled' : 'Disabled' %></span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bg-neutral-900/60 rounded-sm p-5 border-t border-neutral-800/70 shadow-sm">
+                <h3 class="text-base font-semibold text-white">Authentication</h3>
+                <p class="text-xs text-slate-400 mt-1">OAuth and API credentials.</p>
+                <div class="mt-4 space-y-3 text-sm">
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">OAuth Link</span>
+                    <span class="text-white font-medium"><%= adminSettings.auth.oauthLink %></span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Callback Path</span>
+                    <span class="text-white font-medium"><%= adminSettings.auth.callbackPath %></span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">OAuth App ID</span>
+                    <span class="text-white font-medium"><%= adminSettings.auth.oauthId %></span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">OAuth Secret</span>
+                    <span class="text-white font-medium"><%= adminSettings.secrets.oauthSecret || 'Not set' %></span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">API Access</span>
+                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium <%= adminSettings.auth.apiEnabled ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/10 text-red-400' %>"><%= adminSettings.auth.apiEnabled ? 'Enabled' : 'Disabled' %></span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">API Code</span>
+                    <span class="text-white font-medium"><%= adminSettings.secrets.apiCode || 'Not set' %></span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Bot Token</span>
+                    <span class="text-white font-medium"><%= adminSettings.secrets.botToken || 'Not set' %></span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Google OAuth</span>
+                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium <%= adminSettings.auth.googleEnabled ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/10 text-red-400' %>"><%= adminSettings.auth.googleEnabled ? 'Enabled' : 'Disabled' %></span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bg-neutral-900/60 rounded-sm p-5 border-t border-neutral-800/70 shadow-sm">
+                <h3 class="text-base font-semibold text-white">Panel</h3>
+                <p class="text-xs text-slate-400 mt-1">Pterodactyl integration details.</p>
+                <div class="mt-4 space-y-3 text-sm">
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Panel Domain</span>
+                    <span class="text-white font-medium"><%= adminSettings.panel.domain %></span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Panel Key</span>
+                    <span class="text-white font-medium"><%= adminSettings.secrets.panelKey || 'Not set' %></span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Packages</span>
+                    <span class="text-white font-medium"><%= adminSettings.panel.packageCount %></span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Eggs</span>
+                    <span class="text-white font-medium"><%= adminSettings.panel.eggCount %></span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Locations</span>
+                    <span class="text-white font-medium"><%= adminSettings.panel.locationCount %></span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Resource Caps</span>
+                    <span class="text-white font-medium"><%= adminSettings.panel.resourceCaps %></span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bg-neutral-900/60 rounded-sm p-5 border-t border-neutral-800/70 shadow-sm">
+                <h3 class="text-base font-semibold text-white">Configuration Tools</h3>
+                <p class="text-xs text-slate-400 mt-1">Manage eggs, plans, and stored configuration.</p>
+                <div class="mt-4 space-y-3 text-sm">
+                  <button type="button" class="w-full rounded-sm border border-neutral-800 bg-white/5 px-4 py-2 text-sm font-medium text-white hover:bg-white/10 transition-colors" onclick="openModal('eggsModal')">
+                    Manage Eggs
+                  </button>
+                  <button type="button" class="w-full rounded-sm border border-neutral-800 bg-white/5 px-4 py-2 text-sm font-medium text-white hover:bg-white/10 transition-colors" onclick="openModal('packagesModal')">
+                    Manage Plans
+                  </button>
+                  <button type="button" class="w-full rounded-sm border border-neutral-800 bg-white/5 px-4 py-2 text-sm font-medium text-white hover:bg-white/10 transition-colors" onclick="openModal('configModal')">
+                    Edit Config JSON
+                  </button>
+                  <a class="inline-flex w-full justify-center rounded-sm border border-neutral-800 bg-white/5 px-4 py-2 text-sm font-medium text-white hover:bg-white/10 transition-colors" href="/admin/settings/eggs/sync">
+                    Sync Eggs from Panel
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-6 bg-neutral-900/60 rounded-sm p-5 border-t border-neutral-800/70 shadow-sm">
+              <h3 class="text-base font-semibold text-white">Notes</h3>
+              <p class="text-xs text-slate-400 mt-2">Settings are stored in the database. Use the tools above to update them, then restart the service for boot-time values (port, secret, clusters) to take effect.</p>
+            </div>
+            <% } %>
+          </div>
+        </div>
+      </main>
+      <%- include('../components/footer') %>
+      <%- include('../components/notifications') %>
+    </div>
+  </div>
+
+  <div id="eggsModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 p-4">
+    <div class="bg-neutral-900 border border-neutral-800 rounded-sm w-full max-w-6xl p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-semibold text-white">Egg Management</h3>
+        <button type="button" class="text-sm text-slate-400 hover:text-white" onclick="closeModal('eggsModal')">Close</button>
+      </div>
+      <div class="max-h-[60vh] overflow-auto border border-neutral-800 rounded-sm">
+        <table class="w-full text-sm text-slate-300">
+          <thead class="bg-neutral-950/60 text-xs uppercase text-slate-500">
+            <tr>
+              <th class="px-3 py-2 text-left">Display</th>
+              <th class="px-3 py-2 text-left">Egg ID</th>
+              <th class="px-3 py-2 text-left">Admin Only</th>
+              <th class="px-3 py-2 text-left">Pro</th>
+              <th class="px-3 py-2 text-left">Min RAM</th>
+              <th class="px-3 py-2 text-left">Min Disk</th>
+              <th class="px-3 py-2 text-left">Min CPU</th>
+              <th class="px-3 py-2 text-left">Max RAM</th>
+              <th class="px-3 py-2 text-left">Max Disk</th>
+              <th class="px-3 py-2 text-left">Max CPU</th>
+              <th class="px-3 py-2 text-left">Icon</th>
+              <th class="px-3 py-2 text-left">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% Object.entries(settings.api.client.eggs || {}).forEach(([key, egg]) => { %>
+              <tr class="border-t border-neutral-800" data-egg-key="<%= key %>">
+                <td class="px-3 py-2">
+                  <input class="w-40 rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-xs text-white" data-field="display" value="<%= egg.display || key %>">
+                </td>
+                <td class="px-3 py-2 text-xs text-slate-400"><%= egg.info && egg.info.egg ? egg.info.egg : '-' %></td>
+                <td class="px-3 py-2">
+                  <input type="checkbox" data-field="adminOnly" <%= egg.adminOnly ? 'checked' : '' %>>
+                </td>
+                <td class="px-3 py-2">
+                  <input type="checkbox" data-field="pro" <%= egg.pro ? 'checked' : '' %>>
+                </td>
+                <td class="px-3 py-2">
+                  <input class="w-16 rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-xs text-white" data-field="min-ram" value="<%= egg.minimum && egg.minimum.ram ? egg.minimum.ram : 0 %>">
+                </td>
+                <td class="px-3 py-2">
+                  <input class="w-16 rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-xs text-white" data-field="min-disk" value="<%= egg.minimum && egg.minimum.disk ? egg.minimum.disk : 0 %>">
+                </td>
+                <td class="px-3 py-2">
+                  <input class="w-16 rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-xs text-white" data-field="min-cpu" value="<%= egg.minimum && egg.minimum.cpu ? egg.minimum.cpu : 0 %>">
+                </td>
+                <td class="px-3 py-2">
+                  <input class="w-16 rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-xs text-white" data-field="max-ram" value="<%= egg.maximum && egg.maximum.ram ? egg.maximum.ram : 0 %>">
+                </td>
+                <td class="px-3 py-2">
+                  <input class="w-16 rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-xs text-white" data-field="max-disk" value="<%= egg.maximum && egg.maximum.disk ? egg.maximum.disk : 0 %>">
+                </td>
+                <td class="px-3 py-2">
+                  <input class="w-16 rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-xs text-white" data-field="max-cpu" value="<%= egg.maximum && egg.maximum.cpu ? egg.maximum.cpu : 0 %>">
+                </td>
+                <td class="px-3 py-2">
+                  <input class="w-28 rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-xs text-white" data-field="icon" value="<%= egg.icon || '' %>">
+                </td>
+                <td class="px-3 py-2">
+                  <button class="rounded-sm border border-neutral-800 bg-white/5 px-3 py-1 text-xs text-white hover:bg-white/10" onclick="saveEgg('<%= key %>')">Save</button>
+                  <span class="ml-2 text-xs text-slate-500" data-status></span>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="packagesModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 p-4">
+    <div class="bg-neutral-900 border border-neutral-800 rounded-sm w-full max-w-3xl p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-semibold text-white">Plan Management</h3>
+        <button type="button" class="text-sm text-slate-400 hover:text-white" onclick="closeModal('packagesModal')">Close</button>
+      </div>
+      <div class="space-y-4">
+        <div class="grid grid-cols-5 gap-3 text-xs text-slate-400">
+          <span>Plan</span>
+          <span>RAM</span>
+          <span>Disk</span>
+          <span>CPU</span>
+          <span>Servers</span>
+        </div>
+        <% Object.entries(settings.api.client.packages.list || {}).forEach(([name, pkg]) => { %>
+          <div class="grid grid-cols-5 gap-3 items-center text-xs" data-package-name="<%= name %>">
+            <input class="rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-white" data-field="name" value="<%= name %>" readonly>
+            <input class="rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-white" data-field="ram" value="<%= pkg.ram %>">
+            <input class="rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-white" data-field="disk" value="<%= pkg.disk %>">
+            <input class="rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-white" data-field="cpu" value="<%= pkg.cpu %>">
+            <div class="flex items-center gap-2">
+              <input class="w-20 rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-white" data-field="servers" value="<%= pkg.servers %>">
+              <button class="rounded-sm border border-neutral-800 bg-white/5 px-2 py-1 text-xs text-white hover:bg-white/10" onclick="savePackage('<%= name %>')">Save</button>
+              <button class="rounded-sm border border-neutral-800 bg-red-500/10 px-2 py-1 text-xs text-red-300 hover:bg-red-500/20" onclick="deletePackage('<%= name %>')">Delete</button>
+              <span class="text-xs text-slate-500" data-status></span>
+            </div>
+          </div>
+        <% }) %>
+        <div class="border-t border-neutral-800 pt-4">
+          <h4 class="text-sm font-semibold text-white mb-2">Add Plan</h4>
+          <div class="grid grid-cols-5 gap-3 items-center text-xs" id="packageAddRow">
+            <input class="rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-white" data-field="name" placeholder="name">
+            <input class="rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-white" data-field="ram" placeholder="ram">
+            <input class="rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-white" data-field="disk" placeholder="disk">
+            <input class="rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-white" data-field="cpu" placeholder="cpu">
+            <div class="flex items-center gap-2">
+              <input class="w-20 rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-white" data-field="servers" placeholder="servers">
+              <button class="rounded-sm border border-neutral-800 bg-white/5 px-2 py-1 text-xs text-white hover:bg-white/10" onclick="addPackage()">Add</button>
+              <span class="text-xs text-slate-500" data-status></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="configModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 p-4">
+    <div class="bg-neutral-900 border border-neutral-800 rounded-sm w-full max-w-4xl p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-semibold text-white">Config JSON</h3>
+        <button type="button" class="text-sm text-slate-400 hover:text-white" onclick="closeModal('configModal')">Close</button>
+      </div>
+      <textarea id="configJson" class="w-full h-80 rounded-sm border border-neutral-800 bg-neutral-950 px-3 py-2 text-xs text-slate-200"><%- JSON.stringify(settings, null, 2) %></textarea>
+      <div class="mt-4 flex items-center gap-3">
+        <button class="rounded-sm border border-neutral-800 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10" onclick="saveConfig()">Save Config</button>
+        <span class="text-xs text-slate-500" id="configStatus"></span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function openModal(id) {
+      const modal = document.getElementById(id);
+      if (!modal) return;
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+    }
+
+    function closeModal(id) {
+      const modal = document.getElementById(id);
+      if (!modal) return;
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    }
+
+    async function saveEgg(key) {
+      const row = document.querySelector(`[data-egg-key="${key}"]`);
+      if (!row) return;
+      const updates = {
+        display: row.querySelector('[data-field="display"]').value,
+        icon: row.querySelector('[data-field="icon"]').value,
+        pro: row.querySelector('[data-field="pro"]').checked,
+        adminOnly: row.querySelector('[data-field="adminOnly"]').checked,
+        minimum: {
+          ram: row.querySelector('[data-field="min-ram"]').value,
+          disk: row.querySelector('[data-field="min-disk"]').value,
+          cpu: row.querySelector('[data-field="min-cpu"]').value,
+        },
+        maximum: {
+          ram: row.querySelector('[data-field="max-ram"]').value,
+          disk: row.querySelector('[data-field="max-disk"]').value,
+          cpu: row.querySelector('[data-field="max-cpu"]').value,
+        },
+      };
+      const status = row.querySelector("[data-status]");
+      const response = await fetch("/admin/settings/eggs/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key, updates }),
+      });
+      status.textContent = response.ok ? "Saved" : "Failed";
+    }
+
+    async function savePackage(name) {
+      const row = document.querySelector(`[data-package-name="${name}"]`);
+      if (!row) return;
+      const payload = {
+        name,
+        ram: row.querySelector('[data-field="ram"]').value,
+        disk: row.querySelector('[data-field="disk"]').value,
+        cpu: row.querySelector('[data-field="cpu"]').value,
+        servers: row.querySelector('[data-field="servers"]').value,
+      };
+      const status = row.querySelector("[data-status]");
+      const response = await fetch("/admin/settings/packages/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      status.textContent = response.ok ? "Saved" : "Failed";
+    }
+
+    async function deletePackage(name) {
+      if (!confirm(`Delete plan ${name}?`)) return;
+      const row = document.querySelector(`[data-package-name="${name}"]`);
+      const status = row ? row.querySelector("[data-status]") : null;
+      const response = await fetch("/admin/settings/packages/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      if (response.ok) {
+        if (row) row.remove();
+      } else if (status) {
+        status.textContent = "Failed";
+      }
+    }
+
+    async function addPackage() {
+      const row = document.getElementById("packageAddRow");
+      if (!row) return;
+      const payload = {
+        name: row.querySelector('[data-field="name"]').value,
+        ram: row.querySelector('[data-field="ram"]').value,
+        disk: row.querySelector('[data-field="disk"]').value,
+        cpu: row.querySelector('[data-field="cpu"]').value,
+        servers: row.querySelector('[data-field="servers"]').value,
+      };
+      const status = row.querySelector("[data-status]");
+      const response = await fetch("/admin/settings/packages/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      status.textContent = response.ok ? "Saved" : "Failed";
+      if (response.ok) {
+        location.reload();
+      }
+    }
+
+    async function saveConfig() {
+      const configValue = document.getElementById("configJson").value;
+      const status = document.getElementById("configStatus");
+      const response = await fetch("/admin/settings/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ config: configValue }),
+      });
+      status.textContent = response.ok ? "Saved" : "Failed";
+    }
+  </script>
+</body>

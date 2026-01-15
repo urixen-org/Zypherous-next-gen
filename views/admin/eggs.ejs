@@ -1,0 +1,160 @@
+<%- include('../components/head') %>
+
+<body class="min-h-screen bg-neutral-950 text-slate-100">
+  <div>
+    <%- include('../components/adminnav') %>
+    <div class="md:pl-64 flex flex-col flex-1 min-h-screen">
+      <%- include('../components/header') %>
+      <main class="flex-1 pb-8">
+        <div class="py-4 md:py-6">
+          <%- include('../components/skeleton') %>
+          <div class="hidden max-w-screen-2xl mx-auto px-4 sm:px-6 md:px-8" id="content">
+            <div class="bg-neutral-900 rounded-sm md:rounded-sm p-4 md:p-6 mb-4 md:mb-6 border-t border-neutral-800/70 shadow-sm">
+              <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                  <h2 class="text-lg md:text-xl font-semibold text-white tracking-tight">Eggs Management</h2>
+                  <p class="text-xs md:text-sm font-normal text-slate-400 mt-1">Sync from panel and control visibility, limits, and icons.</p>
+                </div>
+                <div class="flex items-center gap-3">
+                  <a class="inline-flex items-center rounded-sm border border-neutral-800 bg-white/5 px-4 py-2 text-xs font-medium text-white hover:bg-white/10 transition-colors" href="/admin/settings/eggs/sync">
+                    Sync Eggs from Panel
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <% if (req.query.err) { %>
+            <div class="rounded-sm md:rounded-sm border border-neutral-800/70 p-4 mb-5 bg-red-500/10">
+              <div class="flex">
+                <div class="flex-shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                  </svg>
+                </div>
+                <div class="ml-3">
+                  <p class="text-sm text-white">Error code: <code class="bg-white/10 px-1.5 py-0.5 rounded-sm"><%= req.query.err %></code></p>
+                </div>
+              </div>
+            </div>
+            <% } %>
+
+            <% if (req.query.success) { %>
+            <div class="rounded-sm md:rounded-sm border border-neutral-800/70 p-4 mb-5 bg-sky-500/10">
+              <div class="flex">
+                <div class="flex-shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-sky-500" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                  </svg>
+                </div>
+                <div class="ml-3">
+                  <p class="text-sm text-white"><%= req.query.success %></p>
+                </div>
+              </div>
+            </div>
+            <% } %>
+
+            <div class="grid gap-4 lg:grid-cols-2">
+              <% Object.entries(settings.api.client.eggs || {}).forEach(([key, egg]) => { %>
+                <div class="bg-neutral-900/60 rounded-sm border border-neutral-800 p-4 shadow-sm" data-egg-key="<%= key %>">
+                  <div class="flex items-center justify-between mb-3">
+                    <div>
+                      <h3 class="text-sm font-semibold text-white"><%= egg.display || key %></h3>
+                      <p class="text-xs text-slate-500">ID: <%= egg.info && egg.info.egg ? egg.info.egg : '-' %></p>
+                    </div>
+                    <span class="text-xs text-slate-400">&lt;<%= key %>&gt;</span>
+                  </div>
+                  <div class="grid gap-3 sm:grid-cols-2">
+                    <div class="space-y-2 text-xs">
+                      <div>
+                        <label class="block text-slate-400 mb-1">Display</label>
+                        <input class="w-full rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-xs text-white" data-field="display" value="<%= egg.display || key %>">
+                      </div>
+                      <div>
+                        <label class="block text-slate-400 mb-1">Icon URL</label>
+                        <input class="w-full rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-xs text-white" data-field="icon" value="<%= egg.icon || '' %>">
+                      </div>
+                      <div class="flex items-center gap-3 text-xs">
+                        <label class="flex items-center gap-2">
+                          <input type="checkbox" data-field="adminOnly" <%= egg.adminOnly ? 'checked' : '' %>>
+                          <span>Admin Only</span>
+                        </label>
+                        <label class="flex items-center gap-2">
+                          <input type="checkbox" data-field="pro" <%= egg.pro ? 'checked' : '' %>>
+                          <span>Pro</span>
+                        </label>
+                      </div>
+                    </div>
+                    <div class="space-y-2 text-xs">
+                      <div>
+                        <label class="block text-slate-400 mb-1">Minimum RAM</label>
+                        <input class="w-full rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-xs text-white" data-field="min-ram" value="<%= egg.minimum?.ram || 0 %>">
+                      </div>
+                      <div>
+                        <label class="block text-slate-400 mb-1">Minimum Disk</label>
+                        <input class="w-full rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-xs text-white" data-field="min-disk" value="<%= egg.minimum?.disk || 0 %>">
+                      </div>
+                      <div>
+                        <label class="block text-slate-400 mb-1">Minimum CPU</label>
+                        <input class="w-full rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-xs text-white" data-field="min-cpu" value="<%= egg.minimum?.cpu || 0 %>">
+                      </div>
+                      <div class="grid grid-cols-2 gap-2">
+                        <div>
+                          <label class="block text-slate-400 mb-1">Max RAM</label>
+                          <input class="w-full rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-xs text-white" data-field="max-ram" value="<%= egg.maximum?.ram || 0 %>">
+                        </div>
+                        <div>
+                          <label class="block text-slate-400 mb-1">Max Disk</label>
+                          <input class="w-full rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-xs text-white" data-field="max-disk" value="<%= egg.maximum?.disk || 0 %>">
+                        </div>
+                      </div>
+                      <div>
+                        <label class="block text-slate-400 mb-1">Max CPU</label>
+                        <input class="w-full rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-xs text-white" data-field="max-cpu" value="<%= egg.maximum?.cpu || 0 %>">
+                      </div>
+                    </div>
+                  </div>
+                  <div class="flex items-center justify-between mt-4">
+                    <button class="rounded-sm border border-neutral-800 bg-white/5 px-3 py-1 text-xs text-white hover:bg-white/10" onclick="saveEgg('<%= key %>')">Save</button>
+                    <span class="text-xs text-slate-500" data-status></span>
+                  </div>
+                </div>
+              <% }) %>
+            </div>
+          </div>
+        </div>
+      </main>
+      <%- include('../components/footer') %>
+      <%- include('../components/notifications') %>
+    </div>
+  </div>
+
+  <script>
+    async function saveEgg(key) {
+      const row = document.querySelector(`[data-egg-key="${key}"]`);
+      if (!row) return;
+      const updates = {
+        display: row.querySelector('[data-field="display"]').value,
+        icon: row.querySelector('[data-field="icon"]').value,
+        pro: row.querySelector('[data-field="pro"]').checked,
+        adminOnly: row.querySelector('[data-field="adminOnly"]').checked,
+        minimum: {
+          ram: row.querySelector('[data-field="min-ram"]').value,
+          disk: row.querySelector('[data-field="min-disk"]').value,
+          cpu: row.querySelector('[data-field="min-cpu"]').value,
+        },
+        maximum: {
+          ram: row.querySelector('[data-field="max-ram"]').value,
+          disk: row.querySelector('[data-field="max-disk"]').value,
+          cpu: row.querySelector('[data-field="max-cpu"]').value,
+        },
+      };
+      const status = row.querySelector("[data-status]");
+      const response = await fetch("/admin/settings/eggs/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key, updates }),
+      });
+      status.textContent = response.ok ? "Saved" : "Failed";
+    }
+  </script>
+</body>

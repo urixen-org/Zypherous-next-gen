@@ -1,0 +1,63 @@
+<%- include('../components/head') %>
+
+<body class="min-h-screen bg-neutral-950 text-slate-100">
+  <div>
+    <%- include('../components/adminnav') %>
+    <div class="md:pl-64 flex flex-col flex-1 min-h-screen">
+      <%- include('../components/header') %>
+      <main class="flex-1 pb-8">
+        <div class="py-4 md:py-6">
+          <%- include('../components/skeleton') %>
+          <div class="hidden max-w-screen-2xl mx-auto px-4 sm:px-6 md:px-8" id="content">
+            <div class="bg-neutral-900 rounded-sm md:rounded-sm p-4 md:p-6 mb-4 md:mb-6 border-t border-neutral-800/70 shadow-sm">
+              <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                  <h2 class="text-lg md:text-xl font-semibold text-white tracking-tight">Nodes Management</h2>
+                  <p class="text-xs md:text-sm font-normal text-slate-400 mt-1">Read-only overview of panel nodes.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid gap-4 lg:grid-cols-2">
+              <% (nodes || []).forEach((node) => { %>
+                <div class="bg-neutral-900/60 rounded-sm border border-neutral-800 p-5 shadow-sm">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <h3 class="text-sm font-semibold text-white"><%= node.attributes?.name || 'Unnamed Node' %></h3>
+                      <p class="text-xs text-slate-500">ID: <%= node.attributes?.id ?? '-' %></p>
+                    </div>
+                    <span class="text-xs text-slate-400"><%= node.attributes?.fqdn ?? 'No FQDN' %></span>
+                  </div>
+                  <div class="mt-4 grid gap-3 text-xs text-slate-400">
+                    <div class="flex items-center justify-between">
+                      <span>Location:</span>
+                      <span class="text-white"><%= node.attributes?.location_id ?? '-' %></span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span>Memory (MB):</span>
+                      <span class="text-white"><%= node.attributes?.memory ?? '-' %></span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span>Disk (MB):</span>
+                      <span class="text-white"><%= node.attributes?.disk ?? '-' %></span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span>CPU:</span>
+                      <span class="text-white"><%= node.attributes?.cpu ?? '-' %></span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span>Allocations:</span>
+                      <span class="text-white"><%= node.attributes?.allocated_resources?.allocations ?? '-' %></span>
+                    </div>
+                  </div>
+                </div>
+              <% }) %>
+            </div>
+          </div>
+        </div>
+      </main>
+      <%- include('../components/footer') %>
+      <%- include('../components/notifications') %>
+    </div>
+  </div>
+</body>

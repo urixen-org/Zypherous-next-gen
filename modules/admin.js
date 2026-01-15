@@ -6,6 +6,7 @@
 
 
 const loadConfig = require("../handlers/config");
+const settingsStore = require("../handlers/settings-store");
 const settings = loadConfig("./config.toml");
 
 if (settings.pterodactyl)
@@ -16,6 +17,7 @@ if (settings.pterodactyl)
 
 const fetch = require("node-fetch");
 const fs = require("fs");
+const path = require("path");
 const indexjs = require("../app.js");
 const adminjs = require("./admin.js");
 const ejs = require("ejs");
@@ -26,6 +28,31 @@ const semver = require('semver');
 
 /* Ensure platform release target is met */
 const heliactylModule = { "name": "Admin", "target_platform": "10.0.0" };
+
+function maskSecret(value) {
+  if (!value) return null;
+  const raw = String(value);
+  if (raw.length <= 8) return "********";
+  return `${raw.slice(0, 4)}...${raw.slice(-4)}`;
+}
+
+function countEnabledActions(actions) {
+  if (!actions || typeof actions !== "object") return 0;
+  return Object.values(actions).filter((value) => value === true).length;
+}
+
+function parseLogEntries(content) {
+  if (!content) return [];
+  return content
+    .split("\n")
+    .filter((line) => line.trim().length > 0)
+    .slice(-200)
+    .map((line) => {
+      const match = line.match(/^\[(.+?)\]\s*(.*)$/);
+      if (!match) return { timestamp: "", message: line };
+      return { timestamp: match[1], message: match[2] };
+    });
+}
 
 /* Module */
 module.exports.heliactylModule = heliactylModule;
@@ -456,7 +483,7 @@ module.exports.load = async function (app, db) {
       );
       return res.redirect(successredirect + "?success=PLAN_MODIFIED");
     } else {
-      if (!settings.api.client.client.packages.list[req.query.package])
+      if (!settings.api.client.packages.list[req.query.package])
         return res.redirect(`${failredirect}?err=INVALIDPACKAGE`);
       await db.set("package-" + req.query.id, req.query.package);
       adminjs.suspend(req.query.id);
@@ -1006,6 +1033,526 @@ module.exports.load = async function (app, db) {
     );
   });
 
+  app.get("/admin/settings", async (req, res) => {
+    let theme = indexjs.get(req);
+
+    if (!req.session.pterodactyl) return four0four(req, res, theme);
+
+    let cacheaccount = await fetch(
+      settings.pterodactyl.domain +
+        "/api/application/users/" +
+        (await db.get("users-" + req.session.userinfo.id)) +
+        "?include=servers",
+      {
+        method: "get",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${settings.pterodactyl.key}`,
+        },
+      }
+    );
+    if ((await cacheaccount.statusText) == "Not Found")
+      return four0four(req, res, theme);
+    let cacheaccountinfo = JSON.parse(await cacheaccount.text());
+
+    req.session.pterodactyl = cacheaccountinfo.attributes;
+    if (cacheaccountinfo.attributes.root_admin !== true)
+      return four0four(req, res, theme);
+
+    let coins = 0;
+    if (settings.api.client.coins.enabled && req.session.userinfo) {
+      coins = await db.get("coins-" + req.session.userinfo.id) || 0;
+    }
+
+    const maintenance = settings.maintenance || {
+      enabled: false,
+      allowAdmins: false,
+      message: "",
+    };
+
+    const adminSettings = {
+      core: {
+        name: settings.name,
+        version: settings.version,
+        timezone: settings.timezone,
+        testing: settings.testing === true,
+        clusters: settings.clusters,
+        database: settings.database,
+      },
+      website: {
+        port: settings.website.port,
+        discord: settings.website.discord,
+        coins: settings.website.coins,
+        url: settings.website.url || null,
+      },
+      access: {
+        allowNewUsers: settings.api.client.allow.newusers === true,
+        allowRegen: settings.api.client.allow.regen === true,
+        serverCreate: settings.api.client.allow.server.create === true,
+        serverModify: settings.api.client.allow.server.modify === true,
+        serverDelete: settings.api.client.allow.server.delete === true,
+        whitelistEnabled: settings.whitelist && settings.whitelist.status === true,
+      },
+      features: {
+        coinsEnabled: settings.api.client.coins.enabled === true,
+        storeEnabled: settings.api.client.coins.store.enabled === true,
+        afkEnabled: settings.api.afk && settings.api.afk.enabled === true,
+        linkvertiseEnabled: settings.linkvertise && settings.linkvertise.enabled === true,
+        j4rEnabled: settings.api.client.j4r && settings.api.client.j4r.enabled === true,
+        accountSwitcher: settings.api.client.accountSwitcher === true,
+      },
+      auth: {
+        oauthLink: settings.api.client.oauth2.link,
+        callbackPath: settings.api.client.oauth2.callbackpath,
+        oauthId: settings.api.client.oauth2.id,
+        apiEnabled: settings.api.client.api.enabled === true,
+        googleEnabled: settings.api.client.google && settings.api.client.google.enabled === true,
+      },
+      panel: {
+        domain: settings.pterodactyl.domain,
+        packageCount: Object.keys(settings.api.client.packages.list || {}).length,
+        eggCount: Object.keys(settings.api.client.eggs || {}).length,
+        locationCount: Object.keys(settings.api.client.locations || {}).length,
+        resourceCaps: `RAM ${settings.resources.ram} / Disk ${settings.resources.disk} / CPU ${settings.resources.cpu} / Servers ${settings.resources.servers}`,
+      },
+      maintenance: {
+        enabled: maintenance.enabled === true,
+      },
+      secrets: {
+        websiteSecret: maskSecret(settings.website.secret),
+        panelKey: maskSecret(settings.pterodactyl.key),
+        oauthSecret: maskSecret(settings.api.client.oauth2.secret),
+        apiCode: maskSecret(settings.api.client.api.code),
+        botToken: maskSecret(settings.api.client.bot.token),
+      },
+    };
+
+    ejs.renderFile(
+      `./views/admin/settings.ejs`,
+      {
+        req: req,
+        settings: settings,
+        pterodactyl: req.session.pterodactyl,
+        theme: theme.name,
+        extra: theme.settings.extra,
+        db: db,
+        coins: coins,
+        userinfo: req.session.userinfo,
+        packagename: req.session.userinfo ? await db.get("package-" + req.session.userinfo.id) || settings.api.client.packages.default : null,
+        packages: req.session.userinfo ? settings.api.client.packages.list[await db.get("package-" + req.session.userinfo.id) || settings.api.client.packages.default] : null,
+        adminSettings: adminSettings
+      },
+      null,
+      function (err, str) {
+        if (err) {
+          console.log(`App ― An error has occurred on path /admin/settings:`);
+          console.log(err);
+          return res.send("Internal Server Error");
+        }
+        res.status(200);
+        res.send(str);
+      }
+    );
+  });
+
+  app.get("/admin/settings/eggs/sync", async (req, res) => {
+    let theme = indexjs.get(req);
+
+    if (!req.session.pterodactyl || req.session.pterodactyl.root_admin !== true)
+      return four0four(req, res, theme);
+
+    try {
+      const result = await settingsStore.syncEggsFromPanel(db, { force: true });
+      if (!result.ok) {
+        return res.redirect("/admin/settings?err=EGGSYNCFAILED");
+      }
+      return res.redirect(`/admin/settings?success=Eggs synced (${result.count})`);
+    } catch (error) {
+      console.error("Egg sync failed:", error);
+      return res.redirect("/admin/settings?err=EGGSYNCFAILED");
+    }
+  });
+
+  app.post("/admin/settings/eggs/update", async (req, res) => {
+    if (!req.session.pterodactyl || req.session.pterodactyl.root_admin !== true)
+      return res.status(403).json({ ok: false, error: "unauthorized" });
+
+    const { key, updates } = req.body || {};
+    if (!key || !settings.api?.client?.eggs?.[key]) {
+      return res.status(404).json({ ok: false, error: "notfound" });
+    }
+
+    const egg = settings.api.client.eggs[key];
+    const payload = updates || {};
+    const toNumber = (value) => {
+      const parsed = parseFloat(value);
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
+
+    if (typeof payload.display === "string" && payload.display.trim()) {
+      egg.display = payload.display.trim();
+    }
+    if (typeof payload.icon === "string") {
+      egg.icon = payload.icon.trim();
+    }
+    if (typeof payload.pro !== "undefined") {
+      egg.pro = payload.pro === true;
+    }
+    if (typeof payload.adminOnly !== "undefined") {
+      egg.adminOnly = payload.adminOnly === true;
+    }
+
+    if (!egg.minimum) egg.minimum = { ram: 0, disk: 0, cpu: 0 };
+    if (!egg.maximum) egg.maximum = { ram: 0, disk: 0, cpu: 0 };
+
+    if (payload.minimum) {
+      egg.minimum.ram = toNumber(payload.minimum.ram);
+      egg.minimum.disk = toNumber(payload.minimum.disk);
+      egg.minimum.cpu = toNumber(payload.minimum.cpu);
+    }
+
+    if (payload.maximum) {
+      egg.maximum.ram = toNumber(payload.maximum.ram);
+      egg.maximum.disk = toNumber(payload.maximum.disk);
+      egg.maximum.cpu = toNumber(payload.maximum.cpu);
+    }
+
+    await settingsStore.save(db, settings);
+    return res.json({ ok: true });
+  });
+
+  app.post("/admin/settings/packages/update", async (req, res) => {
+    if (!req.session.pterodactyl || req.session.pterodactyl.root_admin !== true)
+      return res.status(403).json({ ok: false, error: "unauthorized" });
+
+    const { name, ram, disk, cpu, servers } = req.body || {};
+    if (!name || typeof name !== "string") {
+      return res.status(400).json({ ok: false, error: "invalid" });
+    }
+
+    if (!settings.api.client.packages.list) settings.api.client.packages.list = {};
+
+    settings.api.client.packages.list[name] = {
+      ram: parseFloat(ram) || 0,
+      disk: parseFloat(disk) || 0,
+      cpu: parseFloat(cpu) || 0,
+      servers: parseFloat(servers) || 0,
+    };
+
+    await settingsStore.save(db, settings);
+    return res.json({ ok: true });
+  });
+
+  app.post("/admin/settings/packages/delete", async (req, res) => {
+    if (!req.session.pterodactyl || req.session.pterodactyl.root_admin !== true)
+      return res.status(403).json({ ok: false, error: "unauthorized" });
+
+    const { name } = req.body || {};
+    if (!name || typeof name !== "string") {
+      return res.status(400).json({ ok: false, error: "invalid" });
+    }
+    if (settings.api.client.packages.default === name) {
+      return res.status(400).json({ ok: false, error: "default" });
+    }
+
+    delete settings.api.client.packages.list[name];
+    await settingsStore.save(db, settings);
+    return res.json({ ok: true });
+  });
+
+  app.post("/admin/settings/config", async (req, res) => {
+    if (!req.session.pterodactyl || req.session.pterodactyl.root_admin !== true)
+      return res.status(403).json({ ok: false, error: "unauthorized" });
+
+    let config = req.body?.config;
+    if (typeof config === "string") {
+      try {
+        config = JSON.parse(config);
+      } catch (error) {
+        return res.status(400).json({ ok: false, error: "invalid-json" });
+      }
+    }
+
+    if (!config || typeof config !== "object") {
+      return res.status(400).json({ ok: false, error: "invalid-config" });
+    }
+
+    await settingsStore.save(db, config);
+    return res.json({ ok: true });
+  });
+
+  app.get("/admin/eggs", async (req, res) => {
+    let theme = indexjs.get(req);
+
+    if (!req.session.pterodactyl) return four0four(req, res, theme);
+
+    let cacheaccount = await fetch(
+      settings.pterodactyl.domain +
+        "/api/application/users/" +
+        (await db.get("users-" + req.session.userinfo.id)) +
+        "?include=servers",
+      {
+        method: "get",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${settings.pterodactyl.key}`,
+        },
+      }
+    );
+    if ((await cacheaccount.statusText) == "Not Found")
+      return four0four(req, res, theme);
+    let cacheaccountinfo = JSON.parse(await cacheaccount.text());
+
+    req.session.pterodactyl = cacheaccountinfo.attributes;
+    if (cacheaccountinfo.attributes.root_admin !== true)
+      return four0four(req, res, theme);
+
+    let coins = 0;
+    if (settings.api.client.coins.enabled && req.session.userinfo) {
+      coins = await db.get("coins-" + req.session.userinfo.id) || 0;
+    }
+
+    ejs.renderFile(
+      `./views/admin/eggs.ejs`,
+      {
+        req: req,
+        settings: settings,
+        pterodactyl: req.session.pterodactyl,
+        theme: theme.name,
+        extra: theme.settings.extra,
+        db: db,
+        coins: coins,
+        userinfo: req.session.userinfo,
+        packagename: req.session.userinfo ? await db.get("package-" + req.session.userinfo.id) || settings.api.client.packages.default : null,
+        packages: req.session.userinfo ? settings.api.client.packages.list[await db.get("package-" + req.session.userinfo.id) || settings.api.client.packages.default] : null
+      },
+      null,
+      function (err, str) {
+        if (err) {
+          console.log(`App ― An error has occurred on path /admin/eggs:`);
+          console.log(err);
+          return res.send("Internal Server Error");
+        }
+        res.status(200);
+        res.send(str);
+      }
+    );
+  });
+
+  app.get("/admin/plans", async (req, res) => {
+    let theme = indexjs.get(req);
+
+    if (!req.session.pterodactyl) return four0four(req, res, theme);
+
+    let cacheaccount = await fetch(
+      settings.pterodactyl.domain +
+        "/api/application/users/" +
+        (await db.get("users-" + req.session.userinfo.id)) +
+        "?include=servers",
+      {
+        method: "get",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${settings.pterodactyl.key}`,
+        },
+      }
+    );
+    if ((await cacheaccount.statusText) == "Not Found")
+      return four0four(req, res, theme);
+    let cacheaccountinfo = JSON.parse(await cacheaccount.text());
+
+    req.session.pterodactyl = cacheaccountinfo.attributes;
+    if (cacheaccountinfo.attributes.root_admin !== true)
+      return four0four(req, res, theme);
+
+    let coins = 0;
+    if (settings.api.client.coins.enabled && req.session.userinfo) {
+      coins = await db.get("coins-" + req.session.userinfo.id) || 0;
+    }
+
+    ejs.renderFile(
+      `./views/admin/plans.ejs`,
+      {
+        req: req,
+        settings: settings,
+        pterodactyl: req.session.pterodactyl,
+        theme: theme.name,
+        extra: theme.settings.extra,
+        db: db,
+        coins: coins,
+        userinfo: req.session.userinfo,
+        packagename: req.session.userinfo ? await db.get("package-" + req.session.userinfo.id) || settings.api.client.packages.default : null,
+        packages: req.session.userinfo ? settings.api.client.packages.list[await db.get("package-" + req.session.userinfo.id) || settings.api.client.packages.default] : null
+      },
+      null,
+      function (err, str) {
+        if (err) {
+          console.log(`App ― An error has occurred on path /admin/plans:`);
+          console.log(err);
+          return res.send("Internal Server Error");
+        }
+        res.status(200);
+        res.send(str);
+      }
+    );
+  });
+
+  app.get("/admin/nodes", async (req, res) => {
+    let theme = indexjs.get(req);
+
+    if (!req.session.pterodactyl) return four0four(req, res, theme);
+
+    let cacheaccount = await fetch(
+      settings.pterodactyl.domain +
+        "/api/application/users/" +
+        (await db.get("users-" + req.session.userinfo.id)) +
+        "?include=servers",
+      {
+        method: "get",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${settings.pterodactyl.key}`,
+        },
+      }
+    );
+    if ((await cacheaccount.statusText) == "Not Found")
+      return four0four(req, res, theme);
+    let cacheaccountinfo = JSON.parse(await cacheaccount.text());
+
+    req.session.pterodactyl = cacheaccountinfo.attributes;
+    if (cacheaccountinfo.attributes.root_admin !== true)
+      return four0four(req, res, theme);
+
+    let coins = 0;
+    if (settings.api.client.coins.enabled && req.session.userinfo) {
+      coins = await db.get("coins-" + req.session.userinfo.id) || 0;
+    }
+
+    let nodes = [];
+    try {
+      const nodesResponse = await fetch(
+        `${settings.pterodactyl.domain}/api/application/nodes?per_page=100`,
+        {
+          method: "get",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${settings.pterodactyl.key}`,
+          },
+        }
+      );
+      const nodesData = await nodesResponse.json();
+      nodes = nodesData.data || [];
+    } catch (error) {
+      console.error("Failed to fetch nodes:", error);
+    }
+
+    ejs.renderFile(
+      `./views/admin/nodes.ejs`,
+      {
+        req: req,
+        settings: settings,
+        pterodactyl: req.session.pterodactyl,
+        theme: theme.name,
+        extra: theme.settings.extra,
+        db: db,
+        coins: coins,
+        userinfo: req.session.userinfo,
+        packagename: req.session.userinfo ? await db.get("package-" + req.session.userinfo.id) || settings.api.client.packages.default : null,
+        packages: req.session.userinfo ? settings.api.client.packages.list[await db.get("package-" + req.session.userinfo.id) || settings.api.client.packages.default] : null,
+        nodes: nodes
+      },
+      null,
+      function (err, str) {
+        if (err) {
+          console.log(`App ― An error has occurred on path /admin/nodes:`);
+          console.log(err);
+          return res.send("Internal Server Error");
+        }
+        res.status(200);
+        res.send(str);
+      }
+    );
+  });
+
+  app.get("/admin/logs", async (req, res) => {
+    let theme = indexjs.get(req);
+
+    if (!req.session.pterodactyl) return four0four(req, res, theme);
+
+    let cacheaccount = await fetch(
+      settings.pterodactyl.domain +
+        "/api/application/users/" +
+        (await db.get("users-" + req.session.userinfo.id)) +
+        "?include=servers",
+      {
+        method: "get",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${settings.pterodactyl.key}`,
+        },
+      }
+    );
+    if ((await cacheaccount.statusText) == "Not Found")
+      return four0four(req, res, theme);
+    let cacheaccountinfo = JSON.parse(await cacheaccount.text());
+
+    req.session.pterodactyl = cacheaccountinfo.attributes;
+    if (cacheaccountinfo.attributes.root_admin !== true)
+      return four0four(req, res, theme);
+
+    let coins = 0;
+    if (settings.api.client.coins.enabled && req.session.userinfo) {
+      coins = await db.get("coins-" + req.session.userinfo.id) || 0;
+    }
+
+    const logFilePath = path.join(__dirname, "..", "logs", "transactions.log");
+    let logEntries = [];
+    if (fs.existsSync(logFilePath)) {
+      const logContent = fs.readFileSync(logFilePath, "utf8");
+      logEntries = parseLogEntries(logContent);
+    }
+
+    const logging = settings.logging || { status: false, webhook: "", actions: { user: {}, admin: {} } };
+    const userActions = countEnabledActions(logging.actions && logging.actions.user);
+    const adminActions = countEnabledActions(logging.actions && logging.actions.admin);
+    const logInfo = {
+      enabled: logging.status === true,
+      webhook: maskSecret(logging.webhook),
+      userActions: userActions,
+      adminActions: adminActions,
+      enabledActions: userActions + adminActions,
+      lastEntry: logEntries.length ? logEntries[logEntries.length - 1].timestamp : null,
+    };
+
+    ejs.renderFile(
+      `./views/admin/logs.ejs`,
+      {
+        req: req,
+        settings: settings,
+        pterodactyl: req.session.pterodactyl,
+        theme: theme.name,
+        extra: theme.settings.extra,
+        db: db,
+        coins: coins,
+        userinfo: req.session.userinfo,
+        packagename: req.session.userinfo ? await db.get("package-" + req.session.userinfo.id) || settings.api.client.packages.default : null,
+        packages: req.session.userinfo ? settings.api.client.packages.list[await db.get("package-" + req.session.userinfo.id) || settings.api.client.packages.default] : null,
+        logEntries: logEntries,
+        logInfo: logInfo
+      },
+      null,
+      function (err, str) {
+        if (err) {
+          console.log(`App ― An error has occurred on path /admin/logs:`);
+          console.log(err);
+          return res.send("Internal Server Error");
+        }
+        res.status(200);
+        res.send(str);
+      }
+    );
+  });
+
   // Update the /admin/coins route handler
   app.get("/admin/coins", async (req, res) => {
     let theme = indexjs.get(req);
@@ -1248,6 +1795,811 @@ module.exports.load = async function (app, db) {
     );
   });
 
+  app.get("/admin/user/create", async (req, res) => {
+    let theme = indexjs.get(req);
+
+    if (!req.session.pterodactyl) return four0four(req, res, theme);
+
+    let cacheaccount = await fetch(
+      settings.pterodactyl.domain +
+        "/api/application/users/" +
+        (await db.get("users-" + req.session.userinfo.id)) +
+        "?include=servers",
+      {
+        method: "get",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${settings.pterodactyl.key}`,
+        },
+      }
+    );
+    if ((await cacheaccount.statusText) == "Not Found")
+      return four0four(req, res, theme);
+    let cacheaccountinfo = JSON.parse(await cacheaccount.text());
+
+    req.session.pterodactyl = cacheaccountinfo.attributes;
+    if (cacheaccountinfo.attributes.root_admin !== true)
+      return four0four(req, res, theme);
+
+    let coins = 0;
+    if (settings.api.client.coins.enabled && req.session.userinfo) {
+      coins = await db.get("coins-" + req.session.userinfo.id) || 0;
+    }
+
+    ejs.renderFile(
+      `./views/admin/user-create.ejs`,
+      {
+        req: req,
+        settings: settings,
+        pterodactyl: req.session.pterodactyl,
+        theme: theme.name,
+        extra: theme.settings.extra,
+        db: db,
+        coins: coins,
+        userinfo: req.session.userinfo,
+        packagename: req.session.userinfo ? await db.get("package-" + req.session.userinfo.id) || settings.api.client.packages.default : null,
+        packages: req.session.userinfo ? settings.api.client.packages.list[await db.get("package-" + req.session.userinfo.id) || settings.api.client.packages.default] : null,
+        packageList: settings.api.client.packages.list || {}
+      },
+      null,
+      function (err, str) {
+        if (err) {
+          console.log(`App ― An error has occurred on path /admin/user/create:`);
+          console.log(err);
+          return res.send("Internal Server Error");
+        }
+        res.status(200);
+        res.send(str);
+      }
+    );
+  });
+
+  app.get("/admin/user/create/submit", async (req, res) => {
+    let theme = indexjs.get(req);
+
+    if (!req.session.pterodactyl) return four0four(req, res, theme);
+
+    let cacheaccount = await fetch(
+      settings.pterodactyl.domain +
+        "/api/application/users/" +
+        (await db.get("users-" + req.session.userinfo.id)) +
+        "?include=servers",
+      {
+        method: "get",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${settings.pterodactyl.key}`,
+        },
+      }
+    );
+    if ((await cacheaccount.statusText) == "Not Found")
+      return four0four(req, res, theme);
+    let cacheaccountinfo = JSON.parse(await cacheaccount.text());
+
+    req.session.pterodactyl = cacheaccountinfo.attributes;
+    if (cacheaccountinfo.attributes.root_admin !== true)
+      return four0four(req, res, theme);
+
+    const username = (req.query.username || "").trim();
+    const email = (req.query.email || "").trim();
+    const firstName = (req.query.first_name || "").trim();
+    const lastName = (req.query.last_name || "").trim();
+    const password = (req.query.password || "").trim();
+    const rootAdmin = req.query.root_admin === "true";
+    const language = (req.query.language || "en").trim();
+
+    if (!username || !email || !firstName || !lastName || !password) {
+      return res.redirect("/admin/user/create?err=MISSINGFIELDS");
+    }
+
+    const createResponse = await fetch(
+      `${settings.pterodactyl.domain}/api/application/users`,
+      {
+        method: "post",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          username: username,
+          email: email,
+          first_name: firstName,
+          last_name: lastName,
+          password: password,
+          root_admin: rootAdmin,
+          language: language
+        }),
+      }
+    );
+
+    if (!createResponse.ok) {
+      const errorText = await createResponse.text();
+      console.log("Create user failed:", errorText);
+      return res.redirect("/admin/user/create?err=CREATEFAILED");
+    }
+
+    const createdUser = await createResponse.json();
+
+    const discordId = (req.query.discord_id || "").trim();
+    if (discordId) {
+      let userids = (await db.get("users")) ? await db.get("users") : [];
+      if (!userids.includes(createdUser.attributes.id)) {
+        userids.push(createdUser.attributes.id);
+        await db.set("users", userids);
+      }
+      await db.set(`users-${discordId}`, createdUser.attributes.id);
+
+      const plan = (req.query.package || "").trim();
+      if (plan && settings.api.client.packages.list[plan]) {
+        await db.set(`package-${discordId}`, plan);
+      }
+
+      const coins = parseFloat(req.query.coins || 0);
+      if (!isNaN(coins) && coins > 0) {
+        await db.set(`coins-${discordId}`, coins);
+      }
+
+      const extra = {
+        ram: parseFloat(req.query.ram || 0),
+        disk: parseFloat(req.query.disk || 0),
+        cpu: parseFloat(req.query.cpu || 0),
+        servers: parseFloat(req.query.servers || 0)
+      };
+      if (Object.values(extra).some((value) => !isNaN(value) && value !== 0)) {
+        await db.set(`extra-${discordId}`, {
+          ram: isNaN(extra.ram) ? 0 : extra.ram,
+          disk: isNaN(extra.disk) ? 0 : extra.disk,
+          cpu: isNaN(extra.cpu) ? 0 : extra.cpu,
+          servers: isNaN(extra.servers) ? 0 : extra.servers
+        });
+      }
+    }
+
+    log(
+      `create user`,
+      `${req.session.userinfo.username} created panel user ${createdUser.attributes.username} (${createdUser.attributes.id}).`
+    );
+
+    return res.redirect(`/admin/user/${createdUser.attributes.id}?success=USERCREATED`);
+  });
+
+  app.get("/admin/user/export", async (req, res) => {
+    let theme = indexjs.get(req);
+
+    if (!req.session.pterodactyl) return four0four(req, res, theme);
+
+    let cacheaccount = await fetch(
+      settings.pterodactyl.domain +
+        "/api/application/users/" +
+        (await db.get("users-" + req.session.userinfo.id)) +
+        "?include=servers",
+      {
+        method: "get",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${settings.pterodactyl.key}`,
+        },
+      }
+    );
+    if ((await cacheaccount.statusText) == "Not Found")
+      return four0four(req, res, theme);
+    let cacheaccountinfo = JSON.parse(await cacheaccount.text());
+
+    req.session.pterodactyl = cacheaccountinfo.attributes;
+    if (cacheaccountinfo.attributes.root_admin !== true)
+      return four0four(req, res, theme);
+
+    const searchQuery = req.query.search || "";
+    let page = 1;
+    let totalPages = 1;
+    let users = [];
+
+    do {
+      const usersResponse = await fetch(
+        `${settings.pterodactyl.domain}/api/application/users?per_page=100&page=${page}${searchQuery ? `&filter[username]=${encodeURIComponent(searchQuery)}` : ""}`,
+        {
+          method: "get",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${settings.pterodactyl.key}`,
+          },
+        }
+      );
+
+      if (!usersResponse.ok) {
+        break;
+      }
+
+      const usersData = await usersResponse.json();
+      users = users.concat(usersData.data || []);
+      totalPages = usersData.meta.pagination.total_pages || 1;
+      page += 1;
+    } while (page <= totalPages);
+
+    res.setHeader("Content-Type", "application/json");
+    res.setHeader("Content-Disposition", "attachment; filename=\"users-export.json\"");
+    return res.send(JSON.stringify({ users: users }, null, 2));
+  });
+
+  app.get("/admin/user/:id", async (req, res) => {
+    let theme = indexjs.get(req);
+
+    if (!req.session.pterodactyl) return four0four(req, res, theme);
+
+    let cacheaccount = await fetch(
+      settings.pterodactyl.domain +
+        "/api/application/users/" +
+        (await db.get("users-" + req.session.userinfo.id)) +
+        "?include=servers",
+      {
+        method: "get",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${settings.pterodactyl.key}`,
+        },
+      }
+    );
+    if ((await cacheaccount.statusText) == "Not Found")
+      return four0four(req, res, theme);
+    let cacheaccountinfo = JSON.parse(await cacheaccount.text());
+
+    req.session.pterodactyl = cacheaccountinfo.attributes;
+    if (cacheaccountinfo.attributes.root_admin !== true)
+      return four0four(req, res, theme);
+
+    let coins = 0;
+    if (settings.api.client.coins.enabled && req.session.userinfo) {
+      coins = await db.get("coins-" + req.session.userinfo.id) || 0;
+    }
+
+    const userResponse = await fetch(
+      `${settings.pterodactyl.domain}/api/application/users/${req.params.id}?include=servers`,
+      {
+        method: "get",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${settings.pterodactyl.key}`,
+        },
+      }
+    );
+
+    if (!userResponse.ok) {
+      return res.redirect("/admin/user?err=USERNOTFOUND");
+    }
+
+    const userData = await userResponse.json();
+    const pteroUser = userData.attributes;
+    const userServers = userData.relationships && userData.relationships.servers ? userData.relationships.servers.data : [];
+
+    const linkedDiscordId = (req.query.discord || "").trim();
+    let localData = null;
+
+    if (linkedDiscordId) {
+      const mappedId = await db.get(`users-${linkedDiscordId}`);
+      if (mappedId && String(mappedId) === String(pteroUser.id)) {
+        const packageName = await db.get(`package-${linkedDiscordId}`);
+        const extra = (await db.get(`extra-${linkedDiscordId}`)) || {
+          ram: 0,
+          disk: 0,
+          cpu: 0,
+          servers: 0
+        };
+        const coinBalance = (await db.get(`coins-${linkedDiscordId}`)) || 0;
+        const ip = await db.get(`ip-${linkedDiscordId}`);
+
+        localData = {
+          discordId: linkedDiscordId,
+          packageName: packageName || settings.api.client.packages.default,
+          extra: extra,
+          coins: coinBalance,
+          ip: ip || null
+        };
+      }
+    }
+
+    ejs.renderFile(
+      `./views/admin/user-detail.ejs`,
+      {
+        req: req,
+        settings: settings,
+        pterodactyl: req.session.pterodactyl,
+        theme: theme.name,
+        extra: theme.settings.extra,
+        db: db,
+        coins: coins,
+        userinfo: req.session.userinfo,
+        packagename: req.session.userinfo ? await db.get("package-" + req.session.userinfo.id) || settings.api.client.packages.default : null,
+        packages: req.session.userinfo ? settings.api.client.packages.list[await db.get("package-" + req.session.userinfo.id) || settings.api.client.packages.default] : null,
+        pteroUser: pteroUser,
+        userServers: userServers,
+        linkedDiscordId: linkedDiscordId,
+        localData: localData,
+        packageList: settings.api.client.packages.list || {}
+      },
+      null,
+      function (err, str) {
+        if (err) {
+          console.log(`App ― An error has occurred on path /admin/user/:id:`);
+          console.log(err);
+          return res.send("Internal Server Error");
+        }
+        res.status(200);
+        res.send(str);
+      }
+    );
+  });
+
+  app.get("/admin/user/:id/update", async (req, res) => {
+    let theme = indexjs.get(req);
+
+    if (!req.session.pterodactyl) return four0four(req, res, theme);
+
+    let cacheaccount = await fetch(
+      settings.pterodactyl.domain +
+        "/api/application/users/" +
+        (await db.get("users-" + req.session.userinfo.id)) +
+        "?include=servers",
+      {
+        method: "get",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${settings.pterodactyl.key}`,
+        },
+      }
+    );
+    if ((await cacheaccount.statusText) == "Not Found")
+      return four0four(req, res, theme);
+    let cacheaccountinfo = JSON.parse(await cacheaccount.text());
+
+    req.session.pterodactyl = cacheaccountinfo.attributes;
+    if (cacheaccountinfo.attributes.root_admin !== true)
+      return four0four(req, res, theme);
+
+    const userResponse = await fetch(
+      `${settings.pterodactyl.domain}/api/application/users/${req.params.id}`,
+      {
+        method: "get",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${settings.pterodactyl.key}`,
+        },
+      }
+    );
+
+    if (!userResponse.ok) {
+      return res.redirect(`/admin/user/${req.params.id}?err=USERNOTFOUND`);
+    }
+
+    const userData = await userResponse.json();
+    const current = userData.attributes;
+
+    const payload = {
+      email: req.query.email ? req.query.email.trim() : current.email,
+      username: req.query.username ? req.query.username.trim() : current.username,
+      first_name: req.query.first_name ? req.query.first_name.trim() : current.first_name,
+      last_name: req.query.last_name ? req.query.last_name.trim() : current.last_name,
+      root_admin: typeof req.query.root_admin !== "undefined" ? req.query.root_admin === "true" : current.root_admin,
+      language: req.query.language ? req.query.language.trim() : current.language
+    };
+
+    if (req.query.password && req.query.password.trim().length > 0) {
+      payload.password = req.query.password.trim();
+    }
+
+    const updateResponse = await fetch(
+      `${settings.pterodactyl.domain}/api/application/users/${req.params.id}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${settings.pterodactyl.key}`,
+        },
+        body: JSON.stringify(payload),
+      }
+    );
+
+    if (!updateResponse.ok) {
+      return res.redirect(`/admin/user/${req.params.id}?err=UPDATEFAILED`);
+    }
+
+    log(
+      `update user`,
+      `${req.session.userinfo.username} updated panel user ${current.username} (${current.id}).`
+    );
+
+    return res.redirect(`/admin/user/${req.params.id}?success=USERUPDATED`);
+  });
+
+  app.get("/admin/user/:id/local/plan", async (req, res) => {
+    let theme = indexjs.get(req);
+
+    if (!req.session.pterodactyl) return four0four(req, res, theme);
+
+    let cacheaccount = await fetch(
+      settings.pterodactyl.domain +
+        "/api/application/users/" +
+        (await db.get("users-" + req.session.userinfo.id)) +
+        "?include=servers",
+      {
+        method: "get",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${settings.pterodactyl.key}`,
+        },
+      }
+    );
+    if ((await cacheaccount.statusText) == "Not Found")
+      return four0four(req, res, theme);
+    let cacheaccountinfo = JSON.parse(await cacheaccount.text());
+
+    req.session.pterodactyl = cacheaccountinfo.attributes;
+    if (cacheaccountinfo.attributes.root_admin !== true)
+      return four0four(req, res, theme);
+
+    const discordId = (req.query.discord || "").trim();
+    const packageName = (req.query.package || "").trim();
+
+    if (!discordId) {
+      return res.redirect(`/admin/user/${req.params.id}?err=MISSINGDISCORD`);
+    }
+
+    const mappedId = await db.get(`users-${discordId}`);
+    if (!mappedId || String(mappedId) !== String(req.params.id)) {
+      return res.redirect(`/admin/user/${req.params.id}?err=INVALIDDISCORD`);
+    }
+
+    if (!packageName) {
+      await db.delete(`package-${discordId}`);
+    } else if (!settings.api.client.packages.list[packageName]) {
+      return res.redirect(`/admin/user/${req.params.id}?discord=${encodeURIComponent(discordId)}&err=INVALIDPACKAGE`);
+    } else {
+      await db.set(`package-${discordId}`, packageName);
+    }
+
+    adminjs.suspend(discordId);
+
+    log(
+      `set plan`,
+      `${req.session.userinfo.username} updated plan for Discord ID ${discordId} to ${packageName || "default"}.`
+    );
+
+    return res.redirect(`/admin/user/${req.params.id}?discord=${encodeURIComponent(discordId)}&success=PLANUPDATED`);
+  });
+
+  app.get("/admin/user/:id/local/resources", async (req, res) => {
+    let theme = indexjs.get(req);
+
+    if (!req.session.pterodactyl) return four0four(req, res, theme);
+
+    let cacheaccount = await fetch(
+      settings.pterodactyl.domain +
+        "/api/application/users/" +
+        (await db.get("users-" + req.session.userinfo.id)) +
+        "?include=servers",
+      {
+        method: "get",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${settings.pterodactyl.key}`,
+        },
+      }
+    );
+    if ((await cacheaccount.statusText) == "Not Found")
+      return four0four(req, res, theme);
+    let cacheaccountinfo = JSON.parse(await cacheaccount.text());
+
+    req.session.pterodactyl = cacheaccountinfo.attributes;
+    if (cacheaccountinfo.attributes.root_admin !== true)
+      return four0four(req, res, theme);
+
+    const discordId = (req.query.discord || "").trim();
+    if (!discordId) {
+      return res.redirect(`/admin/user/${req.params.id}?err=MISSINGDISCORD`);
+    }
+
+    const mappedId = await db.get(`users-${discordId}`);
+    if (!mappedId || String(mappedId) !== String(req.params.id)) {
+      return res.redirect(`/admin/user/${req.params.id}?err=INVALIDDISCORD`);
+    }
+
+    const extra = (await db.get(`extra-${discordId}`)) || {
+      ram: 0,
+      disk: 0,
+      cpu: 0,
+      servers: 0
+    };
+
+    const ram = parseFloat(req.query.ram || 0);
+    const disk = parseFloat(req.query.disk || 0);
+    const cpu = parseFloat(req.query.cpu || 0);
+    const servers = parseFloat(req.query.servers || 0);
+
+    if (!isNaN(ram)) extra.ram += ram;
+    if (!isNaN(disk)) extra.disk += disk;
+    if (!isNaN(cpu)) extra.cpu += cpu;
+    if (!isNaN(servers)) extra.servers += servers;
+
+    if (extra.ram === 0 && extra.disk === 0 && extra.cpu === 0 && extra.servers === 0) {
+      await db.delete(`extra-${discordId}`);
+    } else {
+      await db.set(`extra-${discordId}`, extra);
+    }
+
+    adminjs.suspend(discordId);
+
+    log(
+      `set resources`,
+      `${req.session.userinfo.username} adjusted extra resources for Discord ID ${discordId}.`
+    );
+
+    return res.redirect(`/admin/user/${req.params.id}?discord=${encodeURIComponent(discordId)}&success=RESOURCESUPDATED`);
+  });
+
+  app.get("/admin/user/:id/local/coins", async (req, res) => {
+    let theme = indexjs.get(req);
+
+    if (!req.session.pterodactyl) return four0four(req, res, theme);
+
+    let cacheaccount = await fetch(
+      settings.pterodactyl.domain +
+        "/api/application/users/" +
+        (await db.get("users-" + req.session.userinfo.id)) +
+        "?include=servers",
+      {
+        method: "get",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${settings.pterodactyl.key}`,
+        },
+      }
+    );
+    if ((await cacheaccount.statusText) == "Not Found")
+      return four0four(req, res, theme);
+    let cacheaccountinfo = JSON.parse(await cacheaccount.text());
+
+    req.session.pterodactyl = cacheaccountinfo.attributes;
+    if (cacheaccountinfo.attributes.root_admin !== true)
+      return four0four(req, res, theme);
+
+    const discordId = (req.query.discord || "").trim();
+    const mode = (req.query.mode || "set").trim();
+    const coins = parseFloat(req.query.coins || 0);
+
+    if (!discordId) {
+      return res.redirect(`/admin/user/${req.params.id}?err=MISSINGDISCORD`);
+    }
+
+    const mappedId = await db.get(`users-${discordId}`);
+    if (!mappedId || String(mappedId) !== String(req.params.id)) {
+      return res.redirect(`/admin/user/${req.params.id}?err=INVALIDDISCORD`);
+    }
+
+    if (isNaN(coins)) {
+      return res.redirect(`/admin/user/${req.params.id}?discord=${encodeURIComponent(discordId)}&err=INVALIDCOINS`);
+    }
+
+    if (mode === "add") {
+      const current = (await db.get(`coins-${discordId}`)) || 0;
+      const updated = current + coins;
+      if (updated <= 0) {
+        await db.delete(`coins-${discordId}`);
+      } else {
+        await db.set(`coins-${discordId}`, updated);
+      }
+    } else {
+      if (coins <= 0) {
+        await db.delete(`coins-${discordId}`);
+      } else {
+        await db.set(`coins-${discordId}`, coins);
+      }
+    }
+
+    log(
+      mode === "add" ? `add coins` : `set coins`,
+      `${req.session.userinfo.username} updated coins for Discord ID ${discordId}.`
+    );
+
+    return res.redirect(`/admin/user/${req.params.id}?discord=${encodeURIComponent(discordId)}&success=COINSUPDATED`);
+  });
+
+  app.get("/admin/user/:id/link", async (req, res) => {
+    let theme = indexjs.get(req);
+
+    if (!req.session.pterodactyl) return four0four(req, res, theme);
+
+    let cacheaccount = await fetch(
+      settings.pterodactyl.domain +
+        "/api/application/users/" +
+        (await db.get("users-" + req.session.userinfo.id)) +
+        "?include=servers",
+      {
+        method: "get",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${settings.pterodactyl.key}`,
+        },
+      }
+    );
+    if ((await cacheaccount.statusText) == "Not Found")
+      return four0four(req, res, theme);
+    let cacheaccountinfo = JSON.parse(await cacheaccount.text());
+
+    req.session.pterodactyl = cacheaccountinfo.attributes;
+    if (cacheaccountinfo.attributes.root_admin !== true)
+      return four0four(req, res, theme);
+
+    const discordId = (req.query.discord || "").trim();
+    if (!discordId) {
+      return res.redirect(`/admin/user/${req.params.id}?err=MISSINGDISCORD`);
+    }
+
+    const existing = await db.get(`users-${discordId}`);
+    if (existing && String(existing) !== String(req.params.id)) {
+      return res.redirect(`/admin/user/${req.params.id}?err=DISCORDALREADYLINKED`);
+    }
+
+    let userids = (await db.get("users")) ? await db.get("users") : [];
+    if (!userids.includes(parseInt(req.params.id, 10))) {
+      userids.push(parseInt(req.params.id, 10));
+      await db.set("users", userids);
+    }
+    await db.set(`users-${discordId}`, parseInt(req.params.id, 10));
+
+    log(
+      `link user`,
+      `${req.session.userinfo.username} linked Discord ID ${discordId} to panel user ${req.params.id}.`
+    );
+
+    return res.redirect(`/admin/user/${req.params.id}?discord=${encodeURIComponent(discordId)}&success=LINKED`);
+  });
+
+  app.get("/admin/user/:id/reset-password", async (req, res) => {
+    let theme = indexjs.get(req);
+
+    if (!req.session.pterodactyl) return four0four(req, res, theme);
+
+    let cacheaccount = await fetch(
+      settings.pterodactyl.domain +
+        "/api/application/users/" +
+        (await db.get("users-" + req.session.userinfo.id)) +
+        "?include=servers",
+      {
+        method: "get",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${settings.pterodactyl.key}`,
+        },
+      }
+    );
+    if ((await cacheaccount.statusText) == "Not Found")
+      return four0four(req, res, theme);
+    let cacheaccountinfo = JSON.parse(await cacheaccount.text());
+
+    req.session.pterodactyl = cacheaccountinfo.attributes;
+    if (cacheaccountinfo.attributes.root_admin !== true)
+      return four0four(req, res, theme);
+
+    const userResponse = await fetch(
+      `${settings.pterodactyl.domain}/api/application/users/${req.params.id}`,
+      {
+        method: "get",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${settings.pterodactyl.key}`,
+        },
+      }
+    );
+
+    if (!userResponse.ok) {
+      return res.redirect(`/admin/user/${req.params.id}?err=USERNOTFOUND`);
+    }
+
+    const userData = await userResponse.json();
+    const current = userData.attributes;
+    const password = (req.query.password || Math.random().toString(36).slice(2, 12)).trim();
+
+    const updateResponse = await fetch(
+      `${settings.pterodactyl.domain}/api/application/users/${req.params.id}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${settings.pterodactyl.key}`,
+        },
+        body: JSON.stringify({
+          email: current.email,
+          username: current.username,
+          first_name: current.first_name,
+          last_name: current.last_name,
+          root_admin: current.root_admin,
+          language: current.language,
+          password: password
+        }),
+      }
+    );
+
+    if (!updateResponse.ok) {
+      return res.redirect(`/admin/user/${req.params.id}?err=PASSWORDFAILED`);
+    }
+
+    log(
+      `reset password`,
+      `${req.session.userinfo.username} reset the password for panel user ${req.params.id}.`
+    );
+
+    return res.redirect(`/admin/user/${req.params.id}?success=PASSWORDRESET&password=${encodeURIComponent(password)}`);
+  });
+
+  app.get("/admin/user/:id/delete", async (req, res) => {
+    let theme = indexjs.get(req);
+
+    if (!req.session.pterodactyl) return four0four(req, res, theme);
+
+    let cacheaccount = await fetch(
+      settings.pterodactyl.domain +
+        "/api/application/users/" +
+        (await db.get("users-" + req.session.userinfo.id)) +
+        "?include=servers",
+      {
+        method: "get",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${settings.pterodactyl.key}`,
+        },
+      }
+    );
+    if ((await cacheaccount.statusText) == "Not Found")
+      return four0four(req, res, theme);
+    let cacheaccountinfo = JSON.parse(await cacheaccount.text());
+
+    req.session.pterodactyl = cacheaccountinfo.attributes;
+    if (cacheaccountinfo.attributes.root_admin !== true)
+      return four0four(req, res, theme);
+
+    const deleteResponse = await fetch(
+      `${settings.pterodactyl.domain}/api/application/users/${req.params.id}`,
+      {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${settings.pterodactyl.key}`,
+        },
+      }
+    );
+
+    if (!deleteResponse.ok) {
+      return res.redirect(`/admin/user/${req.params.id}?err=DELETEFAILED`);
+    }
+
+    let userids = (await db.get("users")) ? await db.get("users") : [];
+    userids = userids.filter((id) => String(id) !== String(req.params.id));
+    if (userids.length === 0) {
+      await db.delete("users");
+    } else {
+      await db.set("users", userids);
+    }
+
+    const discordId = (req.query.discord || "").trim();
+    if (discordId) {
+      const mappedId = await db.get(`users-${discordId}`);
+      if (mappedId && String(mappedId) === String(req.params.id)) {
+        await db.delete(`users-${discordId}`);
+        await db.delete(`coins-${discordId}`);
+        await db.delete(`extra-${discordId}`);
+        await db.delete(`package-${discordId}`);
+        await db.delete(`ip-${discordId}`);
+      }
+    }
+
+    log(
+      `delete user`,
+      `${req.session.userinfo.username} deleted panel user ${req.params.id}.`
+    );
+
+    return res.redirect(`/admin/user?success=USERDELETED`);
+  });
+
   app.get("/admin/user", async (req, res) => {
     let theme = indexjs.get(req);
 
@@ -1463,6 +2815,452 @@ module.exports.load = async function (app, db) {
       console.error("Error in /admin/server route:", error);
       return res.status(500).send("Internal Server Error: " + error.message);
     }
+  });
+
+  app.get("/admin/server/create", async (req, res) => {
+    let theme = indexjs.get(req);
+
+    if (!req.session.pterodactyl) return four0four(req, res, theme);
+
+    let cacheaccount = await fetch(
+      settings.pterodactyl.domain +
+        "/api/application/users/" +
+        (await db.get("users-" + req.session.userinfo.id)) +
+        "?include=servers",
+      {
+        method: "get",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${settings.pterodactyl.key}`,
+        },
+      }
+    );
+    if ((await cacheaccount.statusText) == "Not Found")
+      return four0four(req, res, theme);
+    let cacheaccountinfo = JSON.parse(await cacheaccount.text());
+
+    req.session.pterodactyl = cacheaccountinfo.attributes;
+    if (cacheaccountinfo.attributes.root_admin !== true)
+      return four0four(req, res, theme);
+
+    let coins = 0;
+    if (settings.api.client.coins.enabled && req.session.userinfo) {
+      coins = await db.get("coins-" + req.session.userinfo.id) || 0;
+    }
+
+    ejs.renderFile(
+      `./views/admin/server-create.ejs`,
+      {
+        req: req,
+        settings: settings,
+        pterodactyl: req.session.pterodactyl,
+        theme: theme.name,
+        extra: theme.settings.extra,
+        db: db,
+        coins: coins,
+        userinfo: req.session.userinfo,
+        packagename: req.session.userinfo ? await db.get("package-" + req.session.userinfo.id) || settings.api.client.packages.default : null,
+        packages: req.session.userinfo ? settings.api.client.packages.list[await db.get("package-" + req.session.userinfo.id) || settings.api.client.packages.default] : null,
+        eggs: settings.api.client.eggs || {},
+        locations: settings.api.client.locations || {}
+      },
+      null,
+      function (err, str) {
+        if (err) {
+          console.log(`App ― An error has occurred on path /admin/server/create:`);
+          console.log(err);
+          return res.send("Internal Server Error");
+        }
+        res.status(200);
+        res.send(str);
+      }
+    );
+  });
+
+  app.get("/admin/server/create/submit", async (req, res) => {
+    let theme = indexjs.get(req);
+
+    if (!req.session.pterodactyl) return four0four(req, res, theme);
+
+    let cacheaccount = await fetch(
+      settings.pterodactyl.domain +
+        "/api/application/users/" +
+        (await db.get("users-" + req.session.userinfo.id)) +
+        "?include=servers",
+      {
+        method: "get",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${settings.pterodactyl.key}`,
+        },
+      }
+    );
+    if ((await cacheaccount.statusText) == "Not Found")
+      return four0four(req, res, theme);
+    let cacheaccountinfo = JSON.parse(await cacheaccount.text());
+
+    req.session.pterodactyl = cacheaccountinfo.attributes;
+    if (cacheaccountinfo.attributes.root_admin !== true)
+      return four0four(req, res, theme);
+
+    const name = (req.query.name || "").trim();
+    const eggKey = (req.query.egg || "").trim();
+    const location = parseInt(req.query.location, 10);
+    const ram = parseInt(req.query.ram, 10);
+    const disk = parseInt(req.query.disk, 10);
+    const cpu = parseInt(req.query.cpu, 10);
+
+    let userId = (req.query.user_id || "").trim();
+    const discordId = (req.query.discord_id || "").trim();
+    if (!userId && discordId) {
+      userId = await db.get(`users-${discordId}`);
+    }
+
+    if (!name || !eggKey || !location || !ram || !disk || !cpu || !userId) {
+      return res.redirect("/admin/server/create?err=MISSINGFIELDS");
+    }
+
+    const eggInfo = settings.api.client.eggs[eggKey];
+    if (!eggInfo || !eggInfo.info) {
+      return res.redirect("/admin/server/create?err=INVALIDEGG");
+    }
+
+    let specs = JSON.parse(JSON.stringify(eggInfo.info));
+    specs.user = userId;
+    if (!specs.limits) {
+      specs.limits = {
+        swap: 0,
+        io: 500,
+        backups: 0,
+      };
+    }
+    specs.name = name;
+    specs.limits.swap = -1;
+    specs.limits.memory = ram;
+    specs.limits.disk = disk;
+    specs.limits.cpu = cpu;
+    specs.feature_limits = specs.feature_limits || {};
+    if (!specs.feature_limits.allocations) {
+      specs.feature_limits.allocations = 25;
+    }
+    if (!specs.deploy) {
+      specs.deploy = {
+        locations: [],
+        dedicated_ip: false,
+        port_range: [],
+      };
+    }
+    specs.deploy.locations = [location];
+
+    const serverinfo = await fetch(
+      `${settings.pterodactyl.domain}/api/application/servers`,
+      {
+        method: "post",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Accept: "application/json",
+        },
+        body: JSON.stringify(specs),
+      }
+    );
+
+    if (!serverinfo.ok) {
+      const errorText = await serverinfo.text();
+      console.log("Admin create server failed:", errorText);
+      return res.redirect("/admin/server/create?err=CREATEFAILED");
+    }
+
+    const serverData = await serverinfo.json();
+
+    log(
+      `create server`,
+      `${req.session.userinfo.username} created server ${serverData.attributes.name} (${serverData.attributes.id}).`
+    );
+
+    return res.redirect(`/admin/server?success=SERVERCREATED`);
+  });
+
+  app.get("/admin/server/export", async (req, res) => {
+    let theme = indexjs.get(req);
+
+    if (!req.session.pterodactyl) return four0four(req, res, theme);
+
+    let cacheaccount = await fetch(
+      settings.pterodactyl.domain +
+        "/api/application/users/" +
+        (await db.get("users-" + req.session.userinfo.id)) +
+        "?include=servers",
+      {
+        method: "get",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${settings.pterodactyl.key}`,
+        },
+      }
+    );
+    if ((await cacheaccount.statusText) == "Not Found")
+      return four0four(req, res, theme);
+    let cacheaccountinfo = JSON.parse(await cacheaccount.text());
+
+    req.session.pterodactyl = cacheaccountinfo.attributes;
+    if (cacheaccountinfo.attributes.root_admin !== true)
+      return four0four(req, res, theme);
+
+    const searchQuery = req.query.search || "";
+    let page = 1;
+    let totalPages = 1;
+    let servers = [];
+
+    do {
+      const serversResponse = await fetch(
+        `${settings.pterodactyl.domain}/api/application/servers?per_page=100&page=${page}${searchQuery ? `&filter[name]=${encodeURIComponent(searchQuery)}` : ""}`,
+        {
+          method: "get",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${settings.pterodactyl.key}`,
+          },
+        }
+      );
+
+      if (!serversResponse.ok) {
+        break;
+      }
+
+      const serversData = await serversResponse.json();
+      servers = servers.concat(serversData.data || []);
+      totalPages = serversData.meta.pagination.total_pages || 1;
+      page += 1;
+    } while (page <= totalPages);
+
+    res.setHeader("Content-Type", "application/json");
+    res.setHeader("Content-Disposition", "attachment; filename=\"servers-export.json\"");
+    return res.send(JSON.stringify({ servers: servers }, null, 2));
+  });
+
+  app.get("/admin/server/:id/edit", async (req, res) => {
+    let theme = indexjs.get(req);
+
+    if (!req.session.pterodactyl) return four0four(req, res, theme);
+
+    let cacheaccount = await fetch(
+      settings.pterodactyl.domain +
+        "/api/application/users/" +
+        (await db.get("users-" + req.session.userinfo.id)) +
+        "?include=servers",
+      {
+        method: "get",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${settings.pterodactyl.key}`,
+        },
+      }
+    );
+    if ((await cacheaccount.statusText) == "Not Found")
+      return four0four(req, res, theme);
+    let cacheaccountinfo = JSON.parse(await cacheaccount.text());
+
+    req.session.pterodactyl = cacheaccountinfo.attributes;
+    if (cacheaccountinfo.attributes.root_admin !== true)
+      return four0four(req, res, theme);
+
+    let coins = 0;
+    if (settings.api.client.coins.enabled && req.session.userinfo) {
+      coins = await db.get("coins-" + req.session.userinfo.id) || 0;
+    }
+
+    const serverResponse = await fetch(
+      `${settings.pterodactyl.domain}/api/application/servers/${req.params.id}?include=allocations,egg`,
+      {
+        method: "get",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${settings.pterodactyl.key}`,
+        },
+      }
+    );
+
+    if (!serverResponse.ok) {
+      return res.redirect("/admin/server?err=SERVERNOTFOUND");
+    }
+
+    const serverData = await serverResponse.json();
+    const server = serverData.attributes;
+    const allocations = (serverData.relationships && serverData.relationships.allocations && serverData.relationships.allocations.data) || [];
+    const primaryAllocation = allocations.find((alloc) => alloc.attributes && alloc.attributes.is_default) || allocations[0];
+    const allocationId = primaryAllocation ? primaryAllocation.attributes.id : server.allocation;
+
+    ejs.renderFile(
+      `./views/admin/server-edit.ejs`,
+      {
+        req: req,
+        settings: settings,
+        pterodactyl: req.session.pterodactyl,
+        theme: theme.name,
+        extra: theme.settings.extra,
+        db: db,
+        coins: coins,
+        userinfo: req.session.userinfo,
+        packagename: req.session.userinfo ? await db.get("package-" + req.session.userinfo.id) || settings.api.client.packages.default : null,
+        packages: req.session.userinfo ? settings.api.client.packages.list[await db.get("package-" + req.session.userinfo.id) || settings.api.client.packages.default] : null,
+        server: server,
+        allocationId: allocationId
+      },
+      null,
+      function (err, str) {
+        if (err) {
+          console.log(`App ― An error has occurred on path /admin/server/:id/edit:`);
+          console.log(err);
+          return res.send("Internal Server Error");
+        }
+        res.status(200);
+        res.send(str);
+      }
+    );
+  });
+
+  app.get("/admin/server/:id/update", async (req, res) => {
+    let theme = indexjs.get(req);
+
+    if (!req.session.pterodactyl) return four0four(req, res, theme);
+
+    let cacheaccount = await fetch(
+      settings.pterodactyl.domain +
+        "/api/application/users/" +
+        (await db.get("users-" + req.session.userinfo.id)) +
+        "?include=servers",
+      {
+        method: "get",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${settings.pterodactyl.key}`,
+        },
+      }
+    );
+    if ((await cacheaccount.statusText) == "Not Found")
+      return four0four(req, res, theme);
+    let cacheaccountinfo = JSON.parse(await cacheaccount.text());
+
+    req.session.pterodactyl = cacheaccountinfo.attributes;
+    if (cacheaccountinfo.attributes.root_admin !== true)
+      return four0four(req, res, theme);
+
+    const serverResponse = await fetch(
+      `${settings.pterodactyl.domain}/api/application/servers/${req.params.id}`,
+      {
+        method: "get",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${settings.pterodactyl.key}`,
+        },
+      }
+    );
+
+    if (!serverResponse.ok) {
+      return res.redirect(`/admin/server/${req.params.id}/edit?err=SERVERNOTFOUND`);
+    }
+
+    const serverData = await serverResponse.json();
+    const current = serverData.attributes;
+
+    const name = req.query.name ? req.query.name.trim() : current.name;
+    const description = typeof req.query.description !== "undefined" ? req.query.description.trim() : current.description;
+
+    const allocationId = req.query.allocation ? parseInt(req.query.allocation, 10) : current.allocation;
+    const memory = req.query.memory ? parseInt(req.query.memory, 10) : current.limits.memory;
+    const disk = req.query.disk ? parseInt(req.query.disk, 10) : current.limits.disk;
+    const cpu = req.query.cpu ? parseInt(req.query.cpu, 10) : current.limits.cpu;
+    const io = req.query.io ? parseInt(req.query.io, 10) : current.limits.io;
+    const swap = req.query.swap ? parseInt(req.query.swap, 10) : current.limits.swap;
+    const backups = req.query.backups ? parseInt(req.query.backups, 10) : current.feature_limits.backups;
+    const databases = req.query.databases ? parseInt(req.query.databases, 10) : current.feature_limits.databases;
+    const allocations = req.query.allocations ? parseInt(req.query.allocations, 10) : current.feature_limits.allocations;
+
+    const detailResponse = await fetch(
+      `${settings.pterodactyl.domain}/api/application/servers/${req.params.id}/details`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${settings.pterodactyl.key}`,
+        },
+        body: JSON.stringify({
+          name: name,
+          user: current.user,
+          description: description
+        }),
+      }
+    );
+
+    if (!detailResponse.ok) {
+      return res.redirect(`/admin/server/${req.params.id}/edit?err=DETAILUPDATEFAILED`);
+    }
+
+    const buildResponse = await fetch(
+      `${settings.pterodactyl.domain}/api/application/servers/${req.params.id}/build`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${settings.pterodactyl.key}`,
+        },
+        body: JSON.stringify({
+          allocation: allocationId,
+          memory: memory,
+          swap: swap,
+          disk: disk,
+          io: io,
+          cpu: cpu,
+          threads: null,
+          feature_limits: {
+            databases: databases,
+            backups: backups,
+            allocations: allocations
+          }
+        }),
+      }
+    );
+
+    if (!buildResponse.ok) {
+      return res.redirect(`/admin/server/${req.params.id}/edit?err=BUILDUPDATEFAILED`);
+    }
+
+    log(
+      `update server`,
+      `${req.session.userinfo.username} updated server ${req.params.id}.`
+    );
+
+    return res.redirect(`/admin/server/${req.params.id}/edit?success=SERVERUPDATED`);
+  });
+
+  app.get("/admin/server/:id/reinstall", async (req, res) => {
+    let theme = indexjs.get(req);
+
+    if (!req.session.pterodactyl) return four0four(req, res, theme);
+    if (req.session.pterodactyl.root_admin !== true) return four0four(req, res, theme);
+
+    const response = await fetch(
+      `${settings.pterodactyl.domain}/api/application/servers/${req.params.id}/reinstall`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${settings.pterodactyl.key}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      return res.redirect(`/admin/server/${req.params.id}/edit?err=REINSTALLFAILED`);
+    }
+
+    log(
+      `reinstall server`,
+      `${req.session.userinfo.username} triggered reinstall for server ${req.params.id}.`
+    );
+
+    return res.redirect(`/admin/server/${req.params.id}/edit?success=REINSTALLED`);
   });
 
   // Add these routes for server actions

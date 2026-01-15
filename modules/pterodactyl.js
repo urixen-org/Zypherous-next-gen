@@ -162,6 +162,9 @@ module.exports.load = async function (app, db) {
           if (!settings.api.client.eggs[egg]) {
             return res.redirect(`${redirectlink}?err=INVALIDEGG`);
           }
+          if (egginfo.adminOnly && !req.session.pterodactyl.root_admin) {
+            return res.redirect(`${redirectlink}?err=INVALIDEGG`);
+          }
           let ram = parseFloat(req.query.ram);
           let disk = parseFloat(req.query.disk);
           let cpu = parseFloat(req.query.cpu);

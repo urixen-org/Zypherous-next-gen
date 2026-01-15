@@ -1,0 +1,102 @@
+<%- include('../components/head') %>
+
+<body class="min-h-screen bg-neutral-950 text-slate-100">
+  <div>
+    <%- include('../components/adminnav') %>
+    <div class="md:pl-64 flex flex-col flex-1 min-h-screen">
+      <%- include('../components/header') %>
+      <main class="flex-1 pb-8">
+        <div class="py-4 md:py-6">
+          <% /* Skeleton loader, lasts about 0.3s to let the page content load */ %>
+          <%- include('../components/skeleton') %>
+          <div class="hidden max-w-screen-2xl mx-auto px-4 sm:px-6 md:px-8" id="content">
+            <div class="bg-neutral-900 rounded-sm md:rounded-sm p-4 md:p-6 mb-4 md:mb-6 border-t border-neutral-800/70 shadow-sm">
+              <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+                <div class="mb-3 md:mb-0">
+                  <h2 class="text-lg md:text-xl font-semibold text-white tracking-tight">System Logs</h2>
+                  <p class="text-xs md:text-sm font-normal text-slate-400 mt-1">Recent activity and logging status.</p>
+                </div>
+              </div>
+            </div>
+
+            <% if (req.query.err) { %>
+            <div class="rounded-sm md:rounded-sm border border-neutral-800/70 p-4 mb-5 bg-red-500/10">
+              <div class="flex">
+                <div class="flex-shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                  </svg>
+                </div>
+                <div class="ml-3">
+                  <p class="text-sm text-white">Error code: <code class="bg-white/10 px-1.5 py-0.5 rounded-sm"><%= req.query.err %></code></p>
+                </div>
+              </div>
+            </div>
+            <% } %>
+
+            <% if (pterodactyl.root_admin == true) { %>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <div class="bg-neutral-900/60 rounded-sm p-4 border-t border-neutral-800/70 shadow-sm">
+                <p class="text-xs text-slate-400">Logging Status</p>
+                <div class="mt-2">
+                  <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium <%= logInfo.enabled ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/10 text-red-400' %>"><%= logInfo.enabled ? 'Enabled' : 'Disabled' %></span>
+                </div>
+              </div>
+              <div class="bg-neutral-900/60 rounded-sm p-4 border-t border-neutral-800/70 shadow-sm">
+                <p class="text-xs text-slate-400">Webhook</p>
+                <p class="mt-2 text-sm text-white font-medium"><%= logInfo.webhook || 'Not set' %></p>
+              </div>
+              <div class="bg-neutral-900/60 rounded-sm p-4 border-t border-neutral-800/70 shadow-sm">
+                <p class="text-xs text-slate-400">Enabled Events</p>
+                <p class="mt-2 text-sm text-white font-medium"><%= logInfo.enabledActions %> total</p>
+                <p class="text-xs text-slate-500 mt-1"><%= logInfo.userActions %> user / <%= logInfo.adminActions %> admin</p>
+              </div>
+              <div class="bg-neutral-900/60 rounded-sm p-4 border-t border-neutral-800/70 shadow-sm">
+                <p class="text-xs text-slate-400">Last Entry</p>
+                <p class="mt-2 text-sm text-white font-medium"><%= logInfo.lastEntry || 'No entries' %></p>
+              </div>
+            </div>
+
+            <div class="bg-neutral-900/60 rounded-sm p-5 border-t border-neutral-800/70 shadow-sm">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="text-base font-semibold text-white">Recent Entries</h3>
+                  <p class="text-xs text-slate-400 mt-1">Showing the latest log entries from the local log file.</p>
+                </div>
+              </div>
+              <div class="mt-4">
+                <% if (logEntries.length === 0) { %>
+                  <div class="rounded-sm border border-neutral-800/70 bg-neutral-950/60 p-4 text-sm text-slate-400">
+                    No local log entries found. Check your Discord webhook for live events.
+                  </div>
+                <% } else { %>
+                  <div class="max-h-[480px] overflow-auto border border-neutral-800/70 rounded-sm">
+                    <table class="min-w-full divide-y divide-neutral-800/70 text-sm">
+                      <thead class="bg-neutral-900/80">
+                        <tr>
+                          <th class="px-4 py-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Timestamp</th>
+                          <th class="px-4 py-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Message</th>
+                        </tr>
+                      </thead>
+                      <tbody class="divide-y divide-neutral-800/70">
+                        <% logEntries.forEach((entry) => { %>
+                          <tr class="hover:bg-neutral-900/70">
+                            <td class="px-4 py-2 text-slate-400 whitespace-nowrap"><%= entry.timestamp || 'N/A' %></td>
+                            <td class="px-4 py-2 text-slate-200"><%= entry.message %></td>
+                          </tr>
+                        <% }) %>
+                      </tbody>
+                    </table>
+                  </div>
+                <% } %>
+              </div>
+            </div>
+            <% } %>
+          </div>
+        </div>
+      </main>
+      <%- include('../components/footer') %>
+      <%- include('../components/notifications') %>
+    </div>
+  </div>
+</body>

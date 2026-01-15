@@ -38,6 +38,7 @@ if (typeof atob === "undefined") {
 // Load settings.
 const loadConfig = require("./handlers/config");
 const settings = loadConfig("./config.toml");
+const settingsStore = require("./handlers/settings-store");
 
 
 const defaultthemesettings = {
@@ -102,6 +103,7 @@ function generateRandomId(length = 6) {
 
 const workerIds = {};
 
+function startCluster() {
 if (cluster.isMaster) {
   // Display ASCII art and loading spinner
   const asciiArt = fs.readFileSync('./handlers/ascii.txt', 'utf8');
@@ -247,8 +249,7 @@ if (cluster.isMaster) {
 
   var cache = false;
   app.use(function (req, res, next) {
-    let manager = loadConfig("./config.toml").api
-      .client.ratelimits;
+    let manager = settings.api.client.ratelimits;
     if (manager[req._parsedUrl.pathname]) {
       if (cache == true) {
         setTimeout(async () => {
@@ -338,3 +339,15 @@ if (cluster.isMaster) {
     console.error('Unhandled Rejection at:', promise, 'reason:', reason);
   });
 }
+}
+
+settingsStore
+  .init(db, "./config.toml")
+  .then(() => {
+    settingsStore.startAutoRefresh(db);
+    startCluster();
+  })
+  .catch((error) => {
+    console.error("Failed to initialize settings:", error);
+    process.exit(1);
+  });

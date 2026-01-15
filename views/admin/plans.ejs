@@ -1,0 +1,125 @@
+<%- include('../components/head') %>
+
+<body class="min-h-screen bg-neutral-950 text-slate-100">
+  <div>
+    <%- include('../components/adminnav') %>
+    <div class="md:pl-64 flex flex-col flex-1 min-h-screen">
+      <%- include('../components/header') %>
+      <main class="flex-1 pb-8">
+        <div class="py-4 md:py-6">
+          <%- include('../components/skeleton') %>
+          <div class="hidden max-w-screen-2xl mx-auto px-4 sm:px-6 md:px-8" id="content">
+            <div class="bg-neutral-900 rounded-sm md:rounded-sm p-4 md:p-6 mb-4 md:mb-6 border-t border-neutral-800/70 shadow-sm">
+              <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                  <h2 class="text-lg md:text-xl font-semibold text-white tracking-tight">Plans Management</h2>
+                  <p class="text-xs md:text-sm font-normal text-slate-400 mt-1">Edit plan limits and create new packages.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-neutral-900/60 rounded-sm p-5 border-t border-neutral-800/70 shadow-sm space-y-4">
+              <div class="grid grid-cols-5 gap-3 text-xs text-slate-400">
+                <span>Plan</span>
+                <span>RAM</span>
+                <span>Disk</span>
+                <span>CPU</span>
+                <span>Servers</span>
+              </div>
+              <% Object.entries(settings.api.client.packages.list || {}).forEach(([name, pkg]) => { %>
+                <div class="grid grid-cols-5 gap-3 items-center text-xs" data-package-name="<%= name %>">
+                  <input class="rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-white" data-field="name" value="<%= name %>" readonly>
+                  <input class="rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-white" data-field="ram" value="<%= pkg.ram %>">
+                  <input class="rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-white" data-field="disk" value="<%= pkg.disk %>">
+                  <input class="rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-white" data-field="cpu" value="<%= pkg.cpu %>">
+                  <div class="flex items-center gap-2">
+                    <input class="w-20 rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-white" data-field="servers" value="<%= pkg.servers %>">
+                    <button class="rounded-sm border border-neutral-800 bg-white/5 px-2 py-1 text-xs text-white hover:bg-white/10" onclick="savePackage('<%= name %>')">Save</button>
+                    <button class="rounded-sm border border-neutral-800 bg-red-500/10 px-2 py-1 text-xs text-red-300 hover:bg-red-500/20" onclick="deletePackage('<%= name %>')">Delete</button>
+                    <span class="text-xs text-slate-500" data-status></span>
+                  </div>
+                </div>
+              <% }) %>
+
+              <div class="border-t border-neutral-800 pt-4">
+                <h4 class="text-sm font-semibold text-white mb-2">Add Plan</h4>
+                <div class="grid grid-cols-5 gap-3 items-center text-xs" id="packageAddRow">
+                  <input class="rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-white" data-field="name" placeholder="name">
+                  <input class="rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-white" data-field="ram" placeholder="ram">
+                  <input class="rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-white" data-field="disk" placeholder="disk">
+                  <input class="rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-white" data-field="cpu" placeholder="cpu">
+                  <div class="flex items-center gap-2">
+                    <input class="w-20 rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-white" data-field="servers" placeholder="servers">
+                    <button class="rounded-sm border border-neutral-800 bg-white/5 px-2 py-1 text-xs text-white hover:bg-white/10" onclick="addPackage()">Add</button>
+                    <span class="text-xs text-slate-500" data-status></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+      <%- include('../components/footer') %>
+      <%- include('../components/notifications') %>
+    </div>
+  </div>
+
+  <script>
+    async function savePackage(name) {
+      const row = document.querySelector(`[data-package-name="${name}"]`);
+      if (!row) return;
+      const payload = {
+        name,
+        ram: row.querySelector('[data-field="ram"]').value,
+        disk: row.querySelector('[data-field="disk"]').value,
+        cpu: row.querySelector('[data-field="cpu"]').value,
+        servers: row.querySelector('[data-field="servers"]').value,
+      };
+      const status = row.querySelector("[data-status]");
+      const response = await fetch("/admin/settings/packages/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      status.textContent = response.ok ? "Saved" : "Failed";
+    }
+
+    async function deletePackage(name) {
+      if (!confirm(`Delete plan ${name}?`)) return;
+      const row = document.querySelector(`[data-package-name="${name}"]`);
+      const status = row ? row.querySelector("[data-status]") : null;
+      const response = await fetch("/admin/settings/packages/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      if (response.ok) {
+        if (row) row.remove();
+      } else if (status) {
+        status.textContent = "Failed";
+      }
+    }
+
+    async function addPackage() {
+      const row = document.getElementById("packageAddRow");
+      if (!row) return;
+      const payload = {
+        name: row.querySelector('[data-field="name"]').value,
+        ram: row.querySelector('[data-field="ram"]').value,
+        disk: row.querySelector('[data-field="disk"]').value,
+        cpu: row.querySelector('[data-field="cpu"]').value,
+        servers: row.querySelector('[data-field="servers"]').value,
+      };
+      const status = row.querySelector("[data-status]");
+      const response = await fetch("/admin/settings/packages/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      status.textContent = response.ok ? "Saved" : "Failed";
+      if (response.ok) {
+        location.reload();
+      }
+    }
+  </script>
+</body>

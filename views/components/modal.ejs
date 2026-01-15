@@ -2,16 +2,10 @@
      x-show="open" 
      @keydown.escape.window="open = false"
      @toggle-modal.window="open = !open"
-     x-transition:enter="transition ease-out duration-100 transform"
-     x-transition:enter-start="opacity-0 scale-90"
-     x-transition:enter-end="opacity-100 scale-100"
-     x-transition:leave="transition ease-in duration-100 transform"
-     x-transition:leave-start="opacity-100 scale-100"
-     x-transition:leave-end="opacity-0 scale-90"     
-     class="fixed inset-0 backdrop-blur z-50 justify-center items-center"
+     class="fixed inset-0 z-50 justify-center items-center"
      style="display: none;" id="createServerModal">
 
-  <div class="bg-[#121b21] p-8 mt-12 rounded-2xl max-w-2xl mx-auto">
+  <div class="bg-neutral-900 border border-neutral-800 p-8 mt-12 rounded-sm max-w-2xl mx-auto">
     <div class="text-white mb-4">
       <h2 class="font-semibold text-xl">Create a new server</h2>
     </div>
@@ -21,20 +15,20 @@
           <span class="cursor-pointer inline-flex items-center">            
           </span>
         </label>
-      <input type="text" id="InputName" class="w-full border border-white/5 bg-[#162027]/30 focus:ring-[#0a9875] focus:border-transparent transition font-medium pl-4 py-3 text-sm text-zinc-400 placeholder:text-zinc-500 tracking-tight rounded-2xl mb-4" placeholder="Server name" x-model="aiName">
+      <input type="text" id="InputName" class="w-full border border-neutral-800 bg-neutral-950 focus:ring-sky-500 focus:border-transparent font-medium pl-4 py-3 text-sm text-slate-300 placeholder:text-slate-500 tracking-tight rounded-sm mb-4" placeholder="Server name" x-model="aiName">
 
       <div class="flex space-x-4 mb-4">
         <div>
           <label class="block mb-2 text-white font-medium text-sm">Memory (GB):</label>
-          <input type="number" id="InputRAM" class="w-full border border-white/5 bg-[#162027]/30 focus:ring-[#0a9875] focus:border-transparent transition font-medium pl-4 py-3 text-sm text-zinc-400 placeholder:text-zinc-500 tracking-tight rounded-2xl mb-4" placeholder="2">
+          <input type="number" id="InputRAM" class="w-full border border-neutral-800 bg-neutral-950 focus:ring-sky-500 focus:border-transparent font-medium pl-4 py-3 text-sm text-slate-300 placeholder:text-slate-500 tracking-tight rounded-sm mb-4" placeholder="2">
         </div>
         <div>
           <label class="block mb-2 text-white font-medium text-sm">Storage (GB):</label>
-          <input type="number" id="InputDisk" class="w-full border border-white/5 bg-[#162027]/30 focus:ring-[#0a9875] focus:border-transparent transition font-medium pl-4 py-3 text-sm text-zinc-400 placeholder:text-zinc-500 tracking-tight rounded-2xl mb-4" placeholder="10">
+          <input type="number" id="InputDisk" class="w-full border border-neutral-800 bg-neutral-950 focus:ring-sky-500 focus:border-transparent font-medium pl-4 py-3 text-sm text-slate-300 placeholder:text-slate-500 tracking-tight rounded-sm mb-4" placeholder="10">
         </div>
         <div>
           <label class="block mb-2 text-white font-medium text-sm">CPU Cores:</label>
-          <input type="number" id="InputCPU" class="w-full border border-white/5 bg-[#162027]/30 focus:ring-[#0a9875] focus:border-transparent transition font-medium pl-4 py-3 text-sm text-zinc-400 placeholder:text-zinc-500 tracking-tight rounded-2xl mb-4" placeholder="1">
+          <input type="number" id="InputCPU" class="w-full border border-neutral-800 bg-neutral-950 focus:ring-sky-500 focus:border-transparent font-medium pl-4 py-3 text-sm text-slate-300 placeholder:text-slate-500 tracking-tight rounded-sm mb-4" placeholder="1">
         </div>
       </div>      
 
@@ -42,10 +36,10 @@
       <div class="grid grid-cols-2 gap-4 mb-4">
         <% for (let [name, value] of Object.entries(settings.api.client.locations)) { %>
           <% if (value.show) { %>
-            <div class="card location-card border border-white/5 bg-[#141d23] hover:bg-[#162027]/30 text-white pl-4 py-2.5 transition rounded-2xl font-medium cursor-pointer"
+            <div class="card location-card border border-neutral-800 bg-neutral-950 hover:bg-neutral-900 text-white pl-4 py-2.5 rounded-sm font-medium cursor-pointer"
                  data-name="<%= name %>" 
                  onclick="selectLocation('<%= name %>')">
-              <img class="inline-flex w-5 h-6 mr-2 rounded-lg" style="margin-bottom: 3.25px;" src="https://flagsapi.com/<%= value.iso %>/flat/64.png" alt="Flag">
+              <img class="inline-flex w-5 h-6 mr-2 rounded-sm" style="margin-bottom: 3.25px;" src="https://flagsapi.com/<%= value.iso %>/flat/64.png" alt="Flag">
               <%= value.name %>
             </div>
           <% } %>
@@ -54,36 +48,33 @@
       </div>
       
       <label class="block mb-2 text-white font-medium text-sm">Software:</label>
-      <select style="background-color: #141d23;" class="w-full border border-white/5 bg-[#162027]/30 focus:ring-[#0a9875] focus:border-transparent transition font-medium pl-4 py-3 text-sm text-zinc-400 placeholder:text-zinc-500 tracking-tight rounded-2xl mb-4"  id="InputEgg">
+      <select class="w-full border border-neutral-800 bg-neutral-950 focus:ring-sky-500 focus:border-transparent font-medium pl-4 py-3 text-sm text-slate-300 placeholder:text-slate-500 tracking-tight rounded-sm mb-4" id="InputEgg">
         <% for (let [name, value] of Object.entries(settings.api.client.eggs)) { %>
-          <% if (value.pro) { %>
-          <% if (packagename !== 'pro') { %>
-          <% } else { %>
-          <option class="" value="<%= name %>"><%= value.display %></option>
-          <% } %>
+          <% if (!(value.adminOnly && (!pterodactyl || !pterodactyl.root_admin))) { %>
+            <% if (value.pro) { %>
+            <% if (packagename !== 'pro') { %>
+            <% } else { %>
+            <option class="" value="<%= name %>"><%= value.display %></option>
+            <% } %>
 
-          <% } else { %>
-          <option class="" value="<%= name %>"><%= value.display %></option>
-         <% } %>
+            <% } else { %>
+            <option class="" value="<%= name %>"><%= value.display %></option>
+           <% } %>
+          <% } %>
         <% } %>
       </select>      
 
       <div x-data="{ open: false }">
-        <button @mouseenter="open = true" @mouseleave="open = false" type="button" onclick="submitNew()" class="bg-[#0a9875] text-white font-semibold py-2 px-4 rounded-2xl mt-4">
+        <button @mouseenter="open = true" @mouseleave="open = false" type="button" onclick="submitNew()" class="bg-sky-500 text-white font-semibold py-2 px-4 rounded-sm mt-4 border border-neutral-800">
           Create Server
         </button>
 
-        <button type="button" onclick="toggleModal()" class="bg-transparent text-zinc-400 transition hover:text-zinc-200 font-medium py-2 px-4 rounded-2xl mt-4">
+        <button type="button" onclick="toggleModal()" class="bg-transparent text-slate-400 hover:text-slate-200 font-medium py-2 px-4 rounded-sm mt-4">
           Close
         </button>
         
-        <div x-show="open" x-transition:enter="transition ease-out duration-300"
-          x-transition:enter-start="opacity-0 transform scale-90"
-          x-transition:enter-end="opacity-100 transform scale-100"
-          x-transition:leave="transition ease-in duration-300"
-          x-transition:leave-start="opacity-100 transform scale-100"
-          x-transition:leave-end="opacity-0 transform scale-90"
-          class="absolute rounded-2xl bg-[#141d23] shadow border-t border-white/10 px-4 py-2.5 text-sm text-white font-medium tracking-tight mt-3"
+        <div x-show="open"
+          class="absolute rounded-sm bg-neutral-950 border border-neutral-800 px-4 py-2.5 text-sm text-white font-medium tracking-tight mt-3"
           style="display: none;">
          By clicking this, you are agreeing to the <%= settings.name %> User Agreement and Minecraft EULA.
        </div>
@@ -112,11 +103,7 @@
   justify-content: center; /* This centers the modal horizontally */
 }
 
-.card:hover {
-  transform: scale(1.03);
-}
-
 .card-selected {
-  border: 1px solid #0a9875; /* Highlight for selected cards */
+  border: 1px solid #38bdf8; /* Highlight for selected cards */
 }
 </style>

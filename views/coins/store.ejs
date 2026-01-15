@@ -1,6 +1,6 @@
 <%- include('../components/head') %>
 
-<body class="bg-[#10181e]" style="font-family: 'Space Grotesk', sans-serif;">
+<body class="min-h-screen bg-neutral-950 text-slate-100">
   <div>
     <%- include('../components/navigation') %>
     <div class="md:pl-64 flex flex-col flex-1 h-screen"> <%- include('../components/header') %>
@@ -8,12 +8,12 @@
         <div class="py-6">
           <%- include('../components/skeleton') %>
           <div class="hidden max-w-screen-2xl pt-16 mx-auto px-4 sm:px-6 md:px-16" id="content">
-            <div class="lg:flex lg:items-center lg:justify-between rounded-3xl mb-8">
+            <div class="lg:flex lg:items-center lg:justify-between rounded-sm mb-8">
               <div class="min-w-0 flex-1">
                 <div class="flex">
                   <div class="relative">
                     <h2 class="text-xl font-semibold text-white sm:truncate tracking-tight">Resources Store</h2>
-                    <p class="text-sm font-normal text-zinc-400">Buy resources with your choice of <%= settings.website.coins %></p>
+                    <p class="text-sm font-normal text-slate-400">Buy resources with your choice of <%= settings.website.coins %></p>
                   </div>
                 </div>
               </div>
@@ -94,23 +94,23 @@
             const cost = `${product.costZTT} <%= settings.website.coins %>`;
             const isAtLimit = resourceLimits && resourceLimits[product.type];
             const buttonClass = isAtLimit 
-              ? 'bg-gray-500 cursor-not-allowed opacity-50' 
-              : 'bg-[#0a9875] hover:bg-[#0cae86]';
+              ? 'bg-slate-800 cursor-not-allowed opacity-50' 
+              : 'bg-sky-500 hover:bg-sky-400';
             const buttonText = isAtLimit ? 'Max Limit Reached' : 'Purchase';
             const buttonLink = isAtLimit ? 'javascript:void(0)' : `/buy?type=${product.type}&amount=1`;
             
             const productHTML = `
-              <div class="bg-[#162027] rounded-lg overflow-hidden border border-white/5 shadow-sm hover:shadow transition-all duration-300 flex flex-col h-full">
+              <div class="bg-neutral-900 rounded-sm overflow-hidden border border-neutral-800/70 shadow-sm hover:shadow-sm transition-all duration-300 flex flex-col h-full">
                 <div class="p-4">
                   <h4 class="font-medium text-white text-sm mb-2">${product.name}</h4>
                   <div class="mt-auto">
-                    <span class="inline-block rounded-full bg-[#0a9875]/10 px-3 py-1 text-xs font-medium text-[#0a9875]">
+                    <span class="inline-block rounded-full bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-500">
                       ${cost}
                     </span>
                   </div>
                 </div>
-                <div class="mt-auto p-3 bg-[#10181e]/50 border-t border-white/10">
-                  <a href="${buttonLink}" class="w-full inline-flex justify-center items-center rounded-lg ${buttonClass} px-2 py-1.5 text-xs font-medium text-white transition-colors">
+                <div class="mt-auto p-3 bg-neutral-950/60 border-t border-neutral-800">
+                  <a href="${buttonLink}" class="w-full inline-flex justify-center items-center rounded-sm ${buttonClass} px-2 py-1.5 text-xs font-medium text-white transition-colors">
                     ${buttonText}
                   </a>
                 </div>
@@ -124,50 +124,50 @@
           packageList.innerHTML = '';
 
           packages.forEach(pkg => {
-            const highlightClass = pkg.highlight ? 'border border-[#0a9875]/30' : 'border border-white/5';
-            const highlightShadow = pkg.highlight ? 'shadow-md shadow-[#0a9875]/5' : 'shadow-md';
+            const highlightClass = pkg.highlight ? 'border border-sky-500/30' : 'border border-neutral-800/70';
+            const highlightShadow = pkg.highlight ? 'shadow-sm shadow-sky-500/10' : 'shadow-sm';
             const isAvailable = isPackageAvailable(pkg);
             const buttonClass = isAvailable 
-              ? 'bg-[#0a9875] hover:bg-[#0cae86]' 
-              : 'bg-gray-500 cursor-not-allowed opacity-50';
+              ? 'bg-sky-500 hover:bg-sky-400' 
+              : 'bg-slate-800 cursor-not-allowed opacity-50';
             const buttonText = isAvailable ? 'Purchase Package' : 'Max Limit Reached';
             const buttonLink = isAvailable ? `/buy-package?id=${pkg.id}` : 'javascript:void(0)';
             
             const packageHTML = `
-              <div class="bg-gradient-to-br from-[#162027]/80 to-[#162027]/40 rounded-xl overflow-hidden ${highlightClass} ${highlightShadow} hover:shadow-lg transition-all duration-300 group flex flex-col h-full">
+              <div class="bg-neutral-900 rounded-sm overflow-hidden ${highlightClass} ${highlightShadow} hover:shadow-sm transition-all duration-300 group flex flex-col h-full">
                 <div class="p-5">
                   <div class="flex items-start justify-between mb-6">
                     <div class="min-h-[60px] max-w-[65%]">
                       <h3 class="text-lg font-medium text-white">${pkg.name}</h3>
-                      <p class="text-sm text-zinc-400 mt-1 line-clamp-2">${pkg.description}</p>
+                      <p class="text-sm text-slate-400 mt-1 line-clamp-2">${pkg.description}</p>
                     </div>
-                    <span class="inline-flex items-center rounded-full bg-[#0a9875]/10 px-4 py-1.5 text-sm font-medium text-[#0a9875] min-w-[100px] justify-center whitespace-nowrap">
+                    <span class="inline-flex items-center rounded-full bg-sky-500/10 px-4 py-1.5 text-sm font-medium text-sky-500 min-w-[100px] justify-center whitespace-nowrap">
                       ${pkg.costZTT} <%= settings.website.coins %>
                     </span>
                   </div>
                   
                   <div class="grid grid-cols-2 gap-3">
-                    <div class="bg-[#10181e]/50 rounded-lg p-3">
-                      <div class="text-xs text-zinc-400">RAM</div>
+                    <div class="bg-neutral-950/60 rounded-sm p-3">
+                      <div class="text-xs text-slate-400">RAM</div>
                       <div class="text-sm font-medium text-white mt-1">${pkg.resources.ram} GB</div>
                     </div>
-                    <div class="bg-[#10181e]/50 rounded-lg p-3">
-                      <div class="text-xs text-zinc-400">CPU</div>
+                    <div class="bg-neutral-950/60 rounded-sm p-3">
+                      <div class="text-xs text-slate-400">CPU</div>
                       <div class="text-sm font-medium text-white mt-1">${pkg.resources.cpu} Cores</div>
                     </div>
-                    <div class="bg-[#10181e]/50 rounded-lg p-3">
-                      <div class="text-xs text-zinc-400">Storage</div>
+                    <div class="bg-neutral-950/60 rounded-sm p-3">
+                      <div class="text-xs text-slate-400">Storage</div>
                       <div class="text-sm font-medium text-white mt-1">${pkg.resources.disk} GB</div>
                     </div>
-                    <div class="bg-[#10181e]/50 rounded-lg p-3">
-                      <div class="text-xs text-zinc-400">Servers</div>
+                    <div class="bg-neutral-950/60 rounded-sm p-3">
+                      <div class="text-xs text-slate-400">Servers</div>
                       <div class="text-sm font-medium text-white mt-1">${pkg.resources.servers} Slots</div>
                     </div>
                   </div>
                 </div>
                 
-                <div class="mt-auto p-3 bg-[#10181e]/50 border-t border-white/10">
-                  <a href="${buttonLink}" class="w-full inline-flex justify-center items-center rounded-lg ${buttonClass} px-3 py-2 text-sm font-medium text-white transition-colors">
+                <div class="mt-auto p-3 bg-neutral-950/60 border-t border-neutral-800">
+                  <a href="${buttonLink}" class="w-full inline-flex justify-center items-center rounded-sm ${buttonClass} px-3 py-2 text-sm font-medium text-white transition-colors">
                     ${buttonText}
                   </a>
                 </div>

@@ -71,6 +71,8 @@
     "admin/resources": "admin/resource.ejs",
     "admin/user": "admin/user.ejs",
     "admin/server": "admin/server.ejs",
+    "admin/settings": "admin/settings.ejs",
+    "admin/logs": "admin/logs.ejs",
     "afk": "coins/afk.ejs"
   },
   "mustbeloggedin": [
@@ -92,6 +94,8 @@
     "/admin/resources",
     "/admin/user",
     "/admin/server",
+    "/admin/settings",
+    "/admin/logs",
     "/settings",
     "/afk"
   ],
@@ -102,6 +106,8 @@
     "/admin/resource",
     "/admin/resources",
     "/admin/user",
-    "/admin/server"
+    "/admin/server",
+    "/admin/settings",
+    "/admin/logs"
   ]
 }

@@ -1,6 +1,6 @@
 <%- include('../components/head') %>
 
-<body class="bg-[#10181e]" style="font-family: 'Space Grotesk', sans-serif;">
+<body class="min-h-screen bg-neutral-950 text-slate-100">
   <div>
     <%- include('../components/adminnav') %>
     <div class="md:pl-64 flex flex-col flex-1 min-h-screen"> 
@@ -10,25 +10,25 @@
           <% /* Skeleton loader, lasts about 0.3s to let the page content load */ %>
           <%- include('../components/skeleton') %>
           <div class="hidden max-w-screen-2xl mx-auto px-4 sm:px-6 md:px-8" id="content">
-            <div class="bg-gradient-to-r from-[#162027]/80 to-[#162027]/30 rounded-xl md:rounded-2xl p-4 md:p-6 mb-4 md:mb-6 border-t border-white/5 shadow-lg">
+            <div class="bg-neutral-900 rounded-sm md:rounded-sm p-4 md:p-6 mb-4 md:mb-6 border-t border-neutral-800/70 shadow-sm">
               <div class="flex flex-col md:flex-row md:items-center md:justify-between">
                 <div class="mb-3 md:mb-0">
                   <h2 class="text-lg md:text-xl font-semibold text-white tracking-tight">Resource Management</h2>
-                  <p class="text-xs md:text-sm font-normal text-zinc-400 mt-1">Manage user resources on the <%= settings.name %> dashboard.</p>
+                  <p class="text-xs md:text-sm font-normal text-slate-400 mt-1">Manage user resources on the <%= settings.name %> dashboard.</p>
                 </div>
               </div>
             </div>
             
             <% if (pterodactyl.root_admin == true) { %>
             <div class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div class="relative flex flex-col space-y-3 rounded-xl md:rounded-2xl bg-[#162027]/30 shadow border-t border-white/5 px-5 py-4 md:px-6 md:py-5 transition">
+              <div class="relative flex flex-col space-y-3 rounded-sm md:rounded-sm bg-neutral-900/60 shadow-sm border-t border-neutral-800/70 px-5 py-4 md:px-6 md:py-5 transition">
                 <h1 class="text-lg font-semibold text-white">Add Resources</h1>
-                <input type="text" class="w-full border border-white/5 bg-[#162027]/30 focus:ring-[#0a9875] focus:border-transparent transition font-medium pl-4 py-3 text-sm text-zinc-400 placeholder:text-zinc-500 tracking-tight rounded-xl" id="id2" placeholder="Discord ID">
-                <input type="text" class="w-full border border-white/5 bg-[#162027]/30 focus:ring-[#0a9875] focus:border-transparent transition font-medium pl-4 py-3 text-sm text-zinc-400 placeholder:text-zinc-500 tracking-tight rounded-xl" id="cpu" placeholder="CPU Cores">
-                <input type="text" class="w-full border border-white/5 bg-[#162027]/30 focus:ring-[#0a9875] focus:border-transparent transition font-medium pl-4 py-3 text-sm text-zinc-400 placeholder:text-zinc-500 tracking-tight rounded-xl" id="memory" placeholder="Memory (GiB)">
-                <input type="text" class="w-full border border-white/5 bg-[#162027]/30 focus:ring-[#0a9875] focus:border-transparent transition font-medium pl-4 py-3 text-sm text-zinc-400 placeholder:text-zinc-500 tracking-tight rounded-xl" id="storage" placeholder="Storage (GiB)">
-                <input type="text" class="w-full border border-white/5 bg-[#162027]/30 focus:ring-[#0a9875] focus:border-transparent transition font-medium pl-4 py-3 text-sm text-zinc-400 placeholder:text-zinc-500 tracking-tight rounded-xl" id="servers" placeholder="Servers">
-                <a href="javascript:addResources()" class="inline-flex items-center justify-center rounded-full border-none bg-[#0a9875] px-6 py-2.5 text-sm font-normal text-white ring-none focus:outline-none hover:bg-[#0b8d6e] transition-colors duration-200">
+                <input type="text" class="w-full border border-neutral-800/70 bg-neutral-900/60 focus:ring-sky-500 focus:border-transparent transition font-medium pl-4 py-3 text-sm text-slate-400 placeholder:text-slate-500 tracking-tight rounded-sm" id="id2" placeholder="Discord ID">
+                <input type="text" class="w-full border border-neutral-800/70 bg-neutral-900/60 focus:ring-sky-500 focus:border-transparent transition font-medium pl-4 py-3 text-sm text-slate-400 placeholder:text-slate-500 tracking-tight rounded-sm" id="cpu" placeholder="CPU Cores">
+                <input type="text" class="w-full border border-neutral-800/70 bg-neutral-900/60 focus:ring-sky-500 focus:border-transparent transition font-medium pl-4 py-3 text-sm text-slate-400 placeholder:text-slate-500 tracking-tight rounded-sm" id="memory" placeholder="Memory (GiB)">
+                <input type="text" class="w-full border border-neutral-800/70 bg-neutral-900/60 focus:ring-sky-500 focus:border-transparent transition font-medium pl-4 py-3 text-sm text-slate-400 placeholder:text-slate-500 tracking-tight rounded-sm" id="storage" placeholder="Storage (GiB)">
+                <input type="text" class="w-full border border-neutral-800/70 bg-neutral-900/60 focus:ring-sky-500 focus:border-transparent transition font-medium pl-4 py-3 text-sm text-slate-400 placeholder:text-slate-500 tracking-tight rounded-sm" id="servers" placeholder="Servers">
+                <a href="javascript:addResources()" class="inline-flex items-center justify-center rounded-full border-none bg-sky-500 px-6 py-2.5 text-sm font-normal text-white ring-none focus:outline-none hover:bg-sky-400 transition-colors duration-200">
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m6-6H6" />
                   </svg>
@@ -36,13 +36,13 @@
                 </a>
               </div>
               
-              <div class="relative flex flex-col space-y-3 rounded-xl md:rounded-2xl bg-[#162027]/30 shadow border-t border-white/5 px-5 py-4 md:px-6 md:py-5 transition">
+              <div class="relative flex flex-col space-y-3 rounded-sm md:rounded-sm bg-neutral-900/60 shadow-sm border-t border-neutral-800/70 px-5 py-4 md:px-6 md:py-5 transition">
                 <h1 class="text-lg font-semibold text-white">Remove Resources</h1>
-                <input type="text" class="w-full border border-white/5 bg-[#162027]/30 focus:ring-[#0a9875] focus:border-transparent transition font-medium pl-4 py-3 text-sm text-zinc-400 placeholder:text-zinc-500 tracking-tight rounded-xl" id="id3" placeholder="Discord ID">
-                <input type="text" class="w-full border border-white/5 bg-[#162027]/30 focus:ring-[#0a9875] focus:border-transparent transition font-medium pl-4 py-3 text-sm text-zinc-400 placeholder:text-zinc-500 tracking-tight rounded-xl" id="cpu2" placeholder="CPU Cores">
-                <input type="text" class="w-full border border-white/5 bg-[#162027]/30 focus:ring-[#0a9875] focus:border-transparent transition font-medium pl-4 py-3 text-sm text-zinc-400 placeholder:text-zinc-500 tracking-tight rounded-xl" id="memory2" placeholder="Memory (GiB)">
-                <input type="text" class="w-full border border-white/5 bg-[#162027]/30 focus:ring-[#0a9875] focus:border-transparent transition font-medium pl-4 py-3 text-sm text-zinc-400 placeholder:text-zinc-500 tracking-tight rounded-xl" id="storage2" placeholder="Storage (GiB)">
-                <input type="text" class="w-full border border-white/5 bg-[#162027]/30 focus:ring-[#0a9875] focus:border-transparent transition font-medium pl-4 py-3 text-sm text-zinc-400 placeholder:text-zinc-500 tracking-tight rounded-xl" id="servers2" placeholder="Servers">
+                <input type="text" class="w-full border border-neutral-800/70 bg-neutral-900/60 focus:ring-sky-500 focus:border-transparent transition font-medium pl-4 py-3 text-sm text-slate-400 placeholder:text-slate-500 tracking-tight rounded-sm" id="id3" placeholder="Discord ID">
+                <input type="text" class="w-full border border-neutral-800/70 bg-neutral-900/60 focus:ring-sky-500 focus:border-transparent transition font-medium pl-4 py-3 text-sm text-slate-400 placeholder:text-slate-500 tracking-tight rounded-sm" id="cpu2" placeholder="CPU Cores">
+                <input type="text" class="w-full border border-neutral-800/70 bg-neutral-900/60 focus:ring-sky-500 focus:border-transparent transition font-medium pl-4 py-3 text-sm text-slate-400 placeholder:text-slate-500 tracking-tight rounded-sm" id="memory2" placeholder="Memory (GiB)">
+                <input type="text" class="w-full border border-neutral-800/70 bg-neutral-900/60 focus:ring-sky-500 focus:border-transparent transition font-medium pl-4 py-3 text-sm text-slate-400 placeholder:text-slate-500 tracking-tight rounded-sm" id="storage2" placeholder="Storage (GiB)">
+                <input type="text" class="w-full border border-neutral-800/70 bg-neutral-900/60 focus:ring-sky-500 focus:border-transparent transition font-medium pl-4 py-3 text-sm text-slate-400 placeholder:text-slate-500 tracking-tight rounded-sm" id="servers2" placeholder="Servers">
                 <a href="javascript:removeResources()" class="inline-flex items-center justify-center rounded-full border-none bg-red-500 px-6 py-2.5 text-sm font-normal text-white ring-none focus:outline-none hover:bg-red-600 transition-colors duration-200">
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M18 12H6" />

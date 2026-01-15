@@ -9,13 +9,13 @@ const toml = require('@iarna/toml');
  */
 function loadConfig(filePath) {
   try {
-    // Read the TOML file
+    if (global.__settings) {
+      return global.__settings;
+    }
+
     const tomlString = fs.readFileSync(filePath, 'utf8');
-    
-    // Parse the TOML string to a JavaScript object
     const config = toml.parse(tomlString);
-    
-    // Return the parsed configuration object
+    global.__settings = config;
     return config;
   } catch (err) {
     console.error('Error reading or parsing the TOML file:', err);

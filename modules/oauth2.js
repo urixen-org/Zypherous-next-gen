@@ -92,8 +92,17 @@ module.exports.load = async function (app, db) {
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Space+Grotesk:wght@300..700&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
+    @font-face {
+      font-family: "Stack Sans Notch";
+      src: url("/assets/StackSansNotch-VariableFont_wght.ttf")
+        format("truetype-variations");
+      font-weight: 100 900;
+      font-style: normal;
+      font-display: swap;
+    }
+
     @keyframes slideDown {
       from {
         transform: translateY(-100%);
@@ -109,15 +118,23 @@ module.exports.load = async function (app, db) {
       overflow: hidden;
       white-space: nowrap;
     }
+
+    body {
+      font-family: "Inter", "Stack Sans Notch", sans-serif;
+    }
+
+    #splashText {
+      font-family: "Stack Sans Notch", "Inter", sans-serif;
+    }
   </style>
 </head>
 <body class="bg-[#10181e] flex flex-col items-center justify-center min-h-screen">
   <div class="flex flex-col items-center">
     <img src="../assets/spinner.png" class="h-10 w-10 animate-spin">
-    <span id="splashText" style="font-family: 'Space Grotesk'" class="mt-6 uppercase text-zinc-400/50 text-sm tracking-widest">...</span>
+    <span id="splashText" class="mt-6 uppercase text-zinc-400/50 text-xs tracking-[0.3em]">...</span>
   </div>
   <script>
-    var splashTexts = ["Inventing new colors for the rainbow.", "Calculating the meaning of life."];
+    var splashTexts = ["Logging you in.", "Syncing your session."];
     function updateSplashText() {
       var randomIndex = Math.floor(Math.random() * splashTexts.length);
       var splashText = splashTexts[randomIndex];

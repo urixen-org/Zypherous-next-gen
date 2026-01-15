@@ -5,9 +5,8 @@
  * 
  */
 
-const fs = require('fs');
-const path = require('path');
 const loadConfig = require("../handlers/config");
+const settingsStore = require("../handlers/settings-store");
 const settings = loadConfig("./config.toml");
 
 /* Ensure platform release target is met */
@@ -18,21 +17,17 @@ module.exports.heliactylModule = heliactylModule;
 module.exports.load = async function (app, db) {
   // Check if maintenance settings exist in config
   if (!settings.maintenance) {
-    // Add default maintenance settings to config
     settings.maintenance = {
       enabled: false,
       message: "We're currently performing scheduled maintenance. Please check back later.",
       allowAdmins: true
     };
-    
-    // Save updated config
+
     try {
-      const configPath = path.join(__dirname, '../', 'config.toml');
-      const toml = require('@iarna/toml');
-      fs.writeFileSync(configPath, toml.stringify(settings));
-      console.log('Added maintenance settings to config.toml');
+      await settingsStore.save(db, settings);
+      console.log('Added maintenance settings to stored configuration');
     } catch (error) {
-      console.error('Error updating config.toml with maintenance settings:', error);
+      console.error('Error updating stored configuration with maintenance settings:', error);
     }
   }
   
