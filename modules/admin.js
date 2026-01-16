@@ -3652,13 +3652,13 @@ function hexToDecimal(hex) {
 async function checkForUpdates(currentVersion) {
   try {
     // Instead of checking releases, just check the repo info
-    const response = await axios.get('https://api.github.com/repos/urixen-org/Zypherous');
+    const response = await axios.get('https://api.github.com/repos/urixen-org/Zypherous-next-gen');
     
     // If we get here, the repo exists
     return {
       isUpToDate: true, // Assume up to date since we can't check specific versions
       latestVersion: currentVersion,
-      releaseUrl: 'https://github.com/urixen-org/Zypherous',
+      releaseUrl: 'https://github.com/urixen-org/Zypherous-next-gen',
       releaseType: 'Beta Release',
       releaseDate: 'Current'
     };
@@ -3669,7 +3669,7 @@ async function checkForUpdates(currentVersion) {
     return {
       isUpToDate: true,
       latestVersion: currentVersion,
-      releaseUrl: 'https://github.com/urixen-org/Zypherous',
+      releaseUrl: 'https://github.com/urixen-org/Zypherous-next-gen',
       releaseType: 'Beta Release',
       releaseDate: new Date().toLocaleDateString()
     };
