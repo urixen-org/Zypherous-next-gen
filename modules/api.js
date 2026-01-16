@@ -49,7 +49,11 @@ module.exports.load = async function (app, db) {
       await db.set(`coins-${req.query.id}`, othercoins + coins)
       await db.set(`coins-${req.session.userinfo.id}`, usercoins - coins)
   
-      log('Gifted Coins', `${req.session.userinfo.username} sent ${coins}\ coins to the user with the ID \`${req.query.id}\`.`)
+      log(
+        'Gifted Coins',
+        `${req.session.userinfo.username} sent ${coins} coins to the user with the ID \`${req.query.id}\`.`,
+        { scope: "user", actorId: req.session.userinfo?.id, targetId: req.query.id, severity: "info", tags: ["coins", "transfer"] }
+      );
       return res.redirect(`/transfer?err=none`);
     });
   

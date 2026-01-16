@@ -8,9 +8,12 @@ const SERVER_TABS = [
   { key: "overview", label: "Overview" },
   { key: "console", label: "Console" },
   { key: "files", label: "Files" },
+  { key: "plugins", label: "Plugins" },
+  { key: "subdomain", label: "Subdomain" },
   { key: "schedules", label: "Schedules" },
   { key: "settings", label: "Settings" },
-  { key: "network", label: "Network" }
+  { key: "network", label: "Network" },
+  { key: "support", label: "Support" }
 ];
 
 function getPanelDomain() {

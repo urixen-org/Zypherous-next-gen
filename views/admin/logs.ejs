@@ -38,22 +38,25 @@
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               <div class="bg-neutral-900/60 rounded-sm p-4 border-t border-neutral-800/70 shadow-sm">
                 <p class="text-xs text-slate-400">Logging Status</p>
-                <div class="mt-2">
+                <div class="mt-2 flex items-center justify-between">
                   <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium <%= logInfo.enabled ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/10 text-red-400' %>"><%= logInfo.enabled ? 'Enabled' : 'Disabled' %></span>
+                  <p class="text-[11px] text-slate-500 truncate ml-3">Local: <code class="bg-white/5 px-1 py-0.5 rounded-sm"><%= logInfo.logPath %></code></p>
                 </div>
               </div>
               <div class="bg-neutral-900/60 rounded-sm p-4 border-t border-neutral-800/70 shadow-sm">
                 <p class="text-xs text-slate-400">Webhook</p>
                 <p class="mt-2 text-sm text-white font-medium"><%= logInfo.webhook || 'Not set' %></p>
+                <p class="text-[11px] text-slate-500 mt-1">Delivered: <%= logInfo.webhookStats.sent || 0 %> • Failed: <span class="<%= (logInfo.webhookStats.failed || 0) > 0 ? 'text-red-400' : 'text-slate-400' %>"><%= logInfo.webhookStats.failed || 0 %></span></p>
               </div>
               <div class="bg-neutral-900/60 rounded-sm p-4 border-t border-neutral-800/70 shadow-sm">
                 <p class="text-xs text-slate-400">Enabled Events</p>
                 <p class="mt-2 text-sm text-white font-medium"><%= logInfo.enabledActions %> total</p>
-                <p class="text-xs text-slate-500 mt-1"><%= logInfo.userActions %> user / <%= logInfo.adminActions %> admin</p>
+                <p class="text-xs text-slate-500 mt-1"><%= logInfo.userActions %> user / <%= logInfo.adminActions %> admin / <%= logInfo.systemActions || 0 %> system</p>
               </div>
               <div class="bg-neutral-900/60 rounded-sm p-4 border-t border-neutral-800/70 shadow-sm">
                 <p class="text-xs text-slate-400">Last Entry</p>
                 <p class="mt-2 text-sm text-white font-medium"><%= logInfo.lastEntry || 'No entries' %></p>
+                <p class="text-[11px] text-slate-500 mt-1">Webhook queue: <%= logInfo.webhookStats.queued || 0 %> / Skipped: <%= logInfo.webhookStats.skipped || 0 %></p>
               </div>
             </div>
 
@@ -75,14 +78,55 @@
                       <thead class="bg-neutral-900/80">
                         <tr>
                           <th class="px-4 py-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Timestamp</th>
+                          <th class="px-4 py-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Action</th>
+                          <th class="px-4 py-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Scope</th>
+                          <th class="px-4 py-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Severity</th>
+                          <th class="px-4 py-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Webhook</th>
                           <th class="px-4 py-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Message</th>
                         </tr>
                       </thead>
                       <tbody class="divide-y divide-neutral-800/70">
                         <% logEntries.forEach((entry) => { %>
+                          <% const severity = (entry.severity || 'info').toLowerCase(); %>
+                          <% const severityClass = severity === 'error' ? 'bg-red-500/15 text-red-300' : severity === 'warn' ? 'bg-amber-500/15 text-amber-300' : severity === 'success' ? 'bg-emerald-500/15 text-emerald-300' : 'bg-sky-500/10 text-sky-300'; %>
+                          <% const webhookStatus = (entry.webhookStatus || 'skipped').toLowerCase(); %>
+                          <% const webhookClass = webhookStatus === 'sent' ? 'bg-emerald-500/15 text-emerald-300' : webhookStatus === 'failed' ? 'bg-red-500/15 text-red-300' : webhookStatus === 'queued' ? 'bg-amber-500/15 text-amber-300' : 'bg-slate-500/10 text-slate-200'; %>
                           <tr class="hover:bg-neutral-900/70">
                             <td class="px-4 py-2 text-slate-400 whitespace-nowrap"><%= entry.timestamp || 'N/A' %></td>
-                            <td class="px-4 py-2 text-slate-200"><%= entry.message %></td>
+                            <td class="px-4 py-2 text-slate-200">
+                              <div class="text-white font-medium"><%= entry.action || 'Unknown' %></div>
+                              <div class="text-[11px] text-slate-500 mt-1">Log ID: <code class="bg-white/5 px-1 py-0.5 rounded-sm"><%= entry.id %></code></div>
+                            </td>
+                            <td class="px-4 py-2">
+                              <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium bg-white/5 text-slate-200 capitalize"><%= entry.scope || 'system' %></span>
+                            </td>
+                            <td class="px-4 py-2">
+                              <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium <%= severityClass %> capitalize"><%= severity %></span>
+                            </td>
+                            <td class="px-4 py-2">
+                              <div class="flex items-center gap-2">
+                                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium <%= webhookClass %> capitalize"><%= webhookStatus %></span>
+                                <% if (entry.webhookCode) { %>
+                                  <span class="text-[11px] text-slate-400">(<%= entry.webhookCode %>)</span>
+                                <% } %>
+                              </div>
+                            </td>
+                            <td class="px-4 py-2 text-slate-200">
+                              <div><%= entry.message %></div>
+                              <div class="flex flex-wrap gap-2 mt-2">
+                                <% if (entry.actorId) { %>
+                                  <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium bg-slate-500/10 text-slate-200">Actor: <code class="ml-1"><%= entry.actorId %></code></span>
+                                <% } %>
+                                <% if (entry.targetId) { %>
+                                  <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium bg-slate-500/10 text-slate-200">Target: <code class="ml-1"><%= entry.targetId %></code></span>
+                                <% } %>
+                                <% if (entry.tags && entry.tags.length) { %>
+                                  <% entry.tags.forEach(function(tag) { %>
+                                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium bg-sky-500/10 text-sky-200"><%= tag %></span>
+                                  <% }) %>
+                                <% } %>
+                              </div>
+                            </td>
                           </tr>
                         <% }) %>
                       </tbody>

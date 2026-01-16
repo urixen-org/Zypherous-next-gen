@@ -15,12 +15,14 @@ const fs = require("fs");
 const fetch = require("node-fetch");
 const chalk = require("chalk");
 const axios = require("axios");
+const JavaScriptObfuscator = require("javascript-obfuscator");
 const arciotext = require("./handlers/afk.js");
 const cluster = require("cluster");
 const os = require("os");
 const ejs = require("ejs");
 const readline = require("readline");
 const chokidar = require('chokidar');
+const logEvent = require("./handlers/log.js");
 
 global.Buffer = global.Buffer || require("buffer").Buffer;
 
@@ -51,6 +53,33 @@ const defaultthemesettings = {
   variables: {},
 };
 
+const DEFAULT_EXTRA_RESOURCES = { ram: 0, disk: 0, cpu: 0, servers: 0 };
+let cachedAfkScript = { key: null, code: "" };
+
+function buildAfkScript() {
+  if (!settings?.api?.afk) return "";
+
+  const cacheKey = `${settings.api.afk.every}|${settings.api.afk.coins}`;
+  if (cachedAfkScript.key === cacheKey && cachedAfkScript.code) {
+    return cachedAfkScript.code;
+  }
+
+  const script = `
+    let everywhat = ${settings.api.afk.every};
+    let gaincoins = ${settings.api.afk.coins};
+    let wspath = "ws";
+
+    ${arciotext}
+  `;
+
+  cachedAfkScript = {
+    key: cacheKey,
+    code: JavaScriptObfuscator.obfuscate(script).getObfuscatedCode(),
+  };
+
+  return cachedAfkScript.code;
+}
+
 /**
  * Renders data for the theme.
  * @param {Object} req - The request object.
@@ -58,33 +87,49 @@ const defaultthemesettings = {
  * @returns {Promise<Object>} The rendered data.
  */
 async function renderdataeval(req, theme) {
-  const JavaScriptObfuscator = require('javascript-obfuscator');
-  let renderdata = {
-    req: req,
-    settings: settings,
+  const userId = req.session?.userinfo?.id;
+  const coinsEnabled = settings?.api?.client?.coins?.enabled === true;
+
+  const [packageNameRaw, extraResourcesRaw, coinsRaw, balanceRaw] =
+    await Promise.all([
+      userId ? db.get(`package-${userId}`) : Promise.resolve(null),
+      userId ? db.get(`extra-${userId}`) : Promise.resolve(null),
+      userId && coinsEnabled ? db.get(`coins-${userId}`) : Promise.resolve(null),
+      userId ? db.get(`bal-${userId}`) : Promise.resolve(null),
+    ]);
+
+  const packageName =
+    packageNameRaw || settings?.api?.client?.packages?.default || null;
+  const extraresources = userId
+    ? extraResourcesRaw || { ...DEFAULT_EXTRA_RESOURCES }
+    : null;
+  const packages =
+    userId && packageName
+      ? settings?.api?.client?.packages?.list?.[packageName] || null
+      : null;
+  const coins =
+    coinsEnabled && userId ? coinsRaw || 0 : coinsEnabled ? null : null;
+  const bal = userId ? balanceRaw || 0 : null;
+
+  const renderdata = {
+    req,
+    settings,
     userinfo: req.session.userinfo,
-    packagename: req.session.userinfo ? await db.get("package-" + req.session.userinfo.id) ? await db.get("package-" + req.session.userinfo.id) : settings.api.client.packages.default : null,
-    extraresources: !req.session.userinfo ? null : (await db.get("extra-" + req.session.userinfo.id) ? await db.get("extra-" + req.session.userinfo.id) : {
-      ram: 0,
-      disk: 0,
-      cpu: 0,
-      servers: 0
-    }),
-    packages: req.session.userinfo ? settings.api.client.packages.list[await db.get("package-" + req.session.userinfo.id) ? await db.get("package-" + req.session.userinfo.id) : settings.api.client.packages.default] : null,
-    coins: settings.api.client.coins.enabled == true ? (req.session.userinfo ? (await db.get("coins-" + req.session.userinfo.id) ? await db.get("coins-" + req.session.userinfo.id) : 0) : null) : null,
-    bal: (req.session.userinfo ? (await db.get("bal-" + req.session.userinfo.id) ? await db.get("bal-" + req.session.userinfo.id) : 0) : null),
+    packagename: userId ? packageName : null,
+    extraresources,
+    packages,
+    coins,
+    bal,
     pterodactyl: req.session.pterodactyl,
     extra: theme.settings.variables,
     db: db,
-    workerId: workerIds[cluster.worker.id] // Add the worker ID here
+    workerId: workerIds[cluster.worker?.id] || null,
   };
-  renderdata.arcioafktext = JavaScriptObfuscator.obfuscate(`
-    let everywhat = ${settings.api.afk.every};
-    let gaincoins = ${settings.api.afk.coins};
-    let wspath = "ws";
 
-    ${arciotext}
-  `).getObfuscatedCode();
+  renderdata.arcioafktext =
+    settings?.api?.afk?.enabled === true
+      ? buildAfkScript()
+      : "";
   return renderdata;
 }
 
@@ -116,6 +161,14 @@ function getOrderedModuleFiles() {
 }
 
 const workerIds = {};
+
+function debounce(fn, wait = 300) {
+  let timer = null;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), wait);
+  };
+}
 
 function startCluster() {
 if (cluster.isMaster) {
@@ -179,26 +232,38 @@ if (cluster.isMaster) {
   
     cluster.on('exit', (worker, code, signal) => {
       console.log(chalk.red(`Worker ${worker.process.pid} died. Forking a new worker...`));
+      logEvent(
+        "worker exit",
+        `Worker ${worker.process.pid} exited (code ${code || "unknown"}, signal ${signal || "none"}).`,
+        { scope: "system", severity: "error", workerId: worker.process.pid, tags: ["cluster"], force: true }
+      );
       const newWorker = cluster.fork();
       const workerId = generateRandomId();
       workerIds[newWorker.id] = workerId; // Assign new ID for the new worker
+      logEvent(
+        "worker fork",
+        `Spawned replacement worker ${newWorker.id} (pid ${newWorker.process.pid}).`,
+        { scope: "system", severity: "info", workerId: newWorker.process.pid, tags: ["cluster"], force: true }
+      );
     });
     
     // Watch for file changes and reboot workers
-    const watcher = chokidar.watch('./modules');
-    const watcher2 = chokidar.watch('./config.yaml');
-    watcher.on('change', (path) => {
-      console.log(chalk.yellow(`File changed: ${path}. Rebooting workers...`));
+    const restartWorkers = debounce((changedPath) => {
+      console.log(chalk.yellow(`File changed: ${changedPath}. Rebooting workers...`));
+      logEvent(
+        "workers reboot",
+        `Recycling workers after change in ${changedPath}.`,
+        { scope: "system", severity: "warn", tags: ["cluster", "reload"], force: true }
+      );
       for (const id in cluster.workers) {
         cluster.workers[id].kill();
       }
-    });
-    watcher2.on('change', (path) => {
-      console.log(chalk.yellow(`File changed: ${path}. Rebooting workers...`));
-      for (const id in cluster.workers) {
-        cluster.workers[id].kill();
-      }
-    });
+    }, 300);
+
+    const watcher = chokidar.watch('./modules', { ignoreInitial: true });
+    const watcher2 = chokidar.watch('./config.yaml', { ignoreInitial: true });
+    watcher.on('change', restartWorkers);
+    watcher2.on('change', restartWorkers);
   }
   
   cluster.on('online', (worker) => {
@@ -210,6 +275,11 @@ if (cluster.isMaster) {
     }));
     console.log(chalk.gray('Current workers status:'));
     console.table(workerTree);
+    logEvent(
+      "worker online",
+      `Worker ${worker.id} (pid ${worker.process.pid}) is online.`,
+      { scope: "system", severity: "info", workerId: worker.process.pid, tags: ["cluster"], force: true }
+    );
   });
 
 } else {

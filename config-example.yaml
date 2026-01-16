@@ -321,6 +321,11 @@ logging:
     report any bugs on the GitHub (github.com/Zypherous/Zypherous). Thank you.
   status: true
   webhook: ''
+  timeout_ms: 5000
+  local:
+    enabled: true
+    file: logs/transactions.log
+    max_size_kb: 512
   actions:
     user:
       signup: true
@@ -340,3 +345,8 @@ logging:
       revoke coupon: true
       remove account: true
       view ip: true
+    system:
+      worker online: true
+      worker exit: true
+      worker fork: true
+      workers reboot: true

@@ -49,17 +49,49 @@ function countEnabledActions(actions) {
   return Object.values(actions).filter((value) => value === true).length;
 }
 
-function parseLogEntries(content) {
-  if (!content) return [];
-  return content
-    .split("\n")
-    .filter((line) => line.trim().length > 0)
-    .slice(-200)
-    .map((line) => {
-      const match = line.match(/^\[(.+?)\]\s*(.*)$/);
-      if (!match) return { timestamp: "", message: line };
-      return { timestamp: match[1], message: match[2] };
+function createAdminLogContext(req, targetId, severity = "info", tags = []) {
+  return {
+    scope: "admin",
+    actorId: req.session?.userinfo?.id || null,
+    targetId: targetId || null,
+    severity,
+    tags,
+  };
+}
+
+function mergeLogEntries(entries) {
+  const deliveries = new Map();
+  for (const entry of entries) {
+    if (entry && entry.kind === "delivery" && entry.id) {
+      deliveries.set(entry.id, entry);
+    }
+  }
+
+  return entries
+    .filter((entry) => entry && entry.kind !== "delivery")
+    .map((entry) => {
+      const delivery = entry.id ? deliveries.get(entry.id) : null;
+      return {
+        ...entry,
+        webhookStatus:
+          (delivery && delivery.webhookStatus) ||
+          entry.webhookStatus ||
+          "skipped",
+        webhookCode: delivery?.webhookCode || null,
+        deliveredAt: delivery?.deliveredAt || null,
+      };
     });
+}
+
+function summarizeWebhookStatus(entries) {
+  return entries.reduce(
+    (acc, entry) => {
+      const status = (entry.webhookStatus || "skipped").toLowerCase();
+      acc[status] = (acc[status] || 0) + 1;
+      return acc;
+    },
+    { sent: 0, failed: 0, queued: 0, skipped: 0 }
+  );
 }
 
 /* Module */
@@ -119,7 +151,8 @@ module.exports.load = async function (app, db) {
     let successredirect = theme.settings.redirect.setcoins || "/";
     log(
       `set coins`,
-      `${req.session.userinfo.username} set the coins of the user with the ID \`${id}\` to \`${coins}\`.`
+      `${req.session.userinfo.username} set the coins of the user with the ID \`${id}\` to \`${coins}\`.`,
+      createAdminLogContext(req, id, "info", ["coins"])
     );
     res.redirect(successredirect + "?success=COINS_SET");
   });
@@ -185,13 +218,15 @@ module.exports.load = async function (app, db) {
     if (coins > 0) {
       log(
         `add coins`,
-        `${req.session.userinfo.username} added \`${coins}\` coins to the user with the ID \`${id}\`'s account.`
+        `${req.session.userinfo.username} added \`${coins}\` coins to the user with the ID \`${id}\`'s account.`,
+        createAdminLogContext(req, id, "info", ["coins"])
       );
       res.redirect(successredirect + "?success=COINS_ADDED");
     } else {
       log(
         `remove coins`,
-        `${req.session.userinfo.username} removed \`${Math.abs(coins)}\` coins from the user with the ID \`${id}\`'s account.`
+        `${req.session.userinfo.username} removed \`${Math.abs(coins)}\` coins from the user with the ID \`${id}\`'s account.`,
+        createAdminLogContext(req, id, "warn", ["coins"])
       );
       res.redirect(successredirect + "?success=COINS_REMOVED");
     }
@@ -329,7 +364,11 @@ module.exports.load = async function (app, db) {
         logMessage += ` Servers: ${serversValue} ${parseFloat(serversstring) > 0 ? 'added' : 'removed'}.`;
       }
       
-      log(`resource ${operation}`, logMessage);
+      log(
+        `resource ${operation}`,
+        logMessage,
+        createAdminLogContext(req, id, "info", ["resources"])
+      );
       
       return res.redirect(successredirect + "?success=RESOURCES_MODIFIED");
     } else {
@@ -487,7 +526,8 @@ module.exports.load = async function (app, db) {
 
       log(
         `set plan`,
-        `${req.session.userinfo.username} removed the plan of the user with the ID \`${req.query.id}\`.`
+        `${req.session.userinfo.username} removed the plan of the user with the ID \`${req.query.id}\`.`,
+        createAdminLogContext(req, req.query.id, "warn", ["plan"])
       );
       return res.redirect(successredirect + "?success=PLAN_MODIFIED");
     } else {
@@ -498,7 +538,8 @@ module.exports.load = async function (app, db) {
 
       log(
         `set plan`,
-        `${req.session.userinfo.username} set the plan of the user with the ID \`${req.query.id}\` to \`${req.query.package}\`.`
+        `${req.session.userinfo.username} set the plan of the user with the ID \`${req.query.id}\` to \`${req.query.package}\`.`,
+        createAdminLogContext(req, req.query.id, "info", ["plan"])
       );
       return res.redirect(successredirect + "?success=PLAN_MODIFIED");
     }
@@ -593,7 +634,8 @@ module.exports.load = async function (app, db) {
 
     log(
       `create coupon`,
-      `${req.session.userinfo.username} created the coupon code \`${code}\` which gives:\`\`\`coins: ${coins}\nMemory: ${ram} MB\nDisk: ${disk} MB\nCPU: ${cpu}%\nServers: ${servers}\`\`\``
+      `${req.session.userinfo.username} created the coupon code \`${code}\` which gives:\`\`\`coins: ${coins}\nMemory: ${ram} MB\nDisk: ${disk} MB\nCPU: ${cpu}%\nServers: ${servers}\`\`\``,
+      createAdminLogContext(req, code, "info", ["coupon"])
     );
     res.redirect(
       theme.settings.redirect.couponcreationsuccess + "?code=" + code
@@ -644,7 +686,8 @@ module.exports.load = async function (app, db) {
 
     log(
       `revoke coupon`,
-      `${req.session.userinfo.username} revoked the coupon code \`${code}\`.`
+      `${req.session.userinfo.username} revoked the coupon code \`${code}\`.`,
+      createAdminLogContext(req, code, "warn", ["coupon"])
     );
     res.redirect(
       theme.settings.redirect.couponrevokesuccess + "?revokedcode=true"
@@ -726,7 +769,8 @@ module.exports.load = async function (app, db) {
 
     log(
       `remove account`,
-      `${req.session.userinfo.username} removed the account with the ID \`${discordid}\`.`
+      `${req.session.userinfo.username} removed the account with the ID \`${discordid}\`.`,
+      createAdminLogContext(req, discordid, "warn", ["account"])
     );
     res.redirect(
       theme.settings.redirect.removeaccountsuccess + "?success=REMOVEACCOUNT"
@@ -771,7 +815,8 @@ module.exports.load = async function (app, db) {
     let ip = await db.get("ip-" + req.query.id);
     log(
       `view ip`,
-      `${req.session.userinfo.username} viewed the IP of the account with the ID \`${req.query.id}\`.`
+      `${req.session.userinfo.username} viewed the IP of the account with the ID \`${req.query.id}\`.`,
+      createAdminLogContext(req, req.query.id, "warn", ["ip"])
     );
     return res.redirect(successredirect + "?err=NONE&ip=" + ip);
   });
@@ -1549,23 +1594,30 @@ module.exports.load = async function (app, db) {
       coins = await db.get("coins-" + req.session.userinfo.id) || 0;
     }
 
-    const logFilePath = path.join(__dirname, "..", "logs", "transactions.log");
-    let logEntries = [];
-    if (fs.existsSync(logFilePath)) {
-      const logContent = fs.readFileSync(logFilePath, "utf8");
-      logEntries = parseLogEntries(logContent);
-    }
+    const logEntriesRaw = await log.readLogEntries(300);
+    const logEntries = mergeLogEntries(logEntriesRaw);
 
-    const logging = settings.logging || { status: false, webhook: "", actions: { user: {}, admin: {} } };
+    const logging = settings.logging || { status: false, webhook: "", actions: { user: {}, admin: {}, system: {} } };
     const userActions = countEnabledActions(logging.actions && logging.actions.user);
     const adminActions = countEnabledActions(logging.actions && logging.actions.admin);
+    const systemActions = countEnabledActions(logging.actions && logging.actions.system);
+    const webhookStats = summarizeWebhookStatus(logEntries);
+    const lastEntry = logEntries.length ? logEntries[logEntries.length - 1] : null;
+    const logFilePath = typeof log.resolveLogFilePath === "function"
+      ? log.resolveLogFilePath()
+      : path.join(__dirname, "..", "logs", "transactions.log");
+    const relativeLogPath = path.relative(process.cwd(), logFilePath);
+
     const logInfo = {
-      enabled: logging.status === true,
+      enabled: logging.status !== false,
       webhook: maskSecret(logging.webhook),
       userActions: userActions,
       adminActions: adminActions,
-      enabledActions: userActions + adminActions,
-      lastEntry: logEntries.length ? logEntries[logEntries.length - 1].timestamp : null,
+      systemActions: systemActions,
+      enabledActions: userActions + adminActions + systemActions,
+      lastEntry: lastEntry?.timestamp || null,
+      webhookStats,
+      logPath: relativeLogPath || "logs/transactions.log",
     };
 
     ejs.renderFile(
@@ -1715,7 +1767,8 @@ module.exports.load = async function (app, db) {
     // Log the action
     log(
       `remove coins`,
-      `${req.session.userinfo.username} removed ${coinsToRemove} coins from the account with the ID \`${targetUser}\`.`
+      `${req.session.userinfo.username} removed ${coinsToRemove} coins from the account with the ID \`${targetUser}\`.`,
+      createAdminLogContext(req, targetUser, "warn", ["coins"])
     );
 
     return res.redirect(theme.settings.redirect.removecoins);
@@ -1773,7 +1826,8 @@ module.exports.load = async function (app, db) {
     // Log the action
     log(
       `add coins`,
-      `${req.session.userinfo.username} added ${coinsToAdd} coins to the account with the ID \`${targetUser}\`.`
+      `${req.session.userinfo.username} added ${coinsToAdd} coins to the account with the ID \`${targetUser}\`.`,
+      createAdminLogContext(req, targetUser, "info", ["coins"])
     );
 
     return res.redirect("/admin/coins?success=Coins added successfully to user " + targetUser);
@@ -2002,7 +2056,8 @@ module.exports.load = async function (app, db) {
 
     log(
       `create user`,
-      `${req.session.userinfo.username} created panel user ${createdUser.attributes.username} (${createdUser.attributes.id}).`
+      `${req.session.userinfo.username} created panel user ${createdUser.attributes.username} (${createdUser.attributes.id}).`,
+      createAdminLogContext(req, createdUser.attributes.id, "info", ["user"])
     );
 
     return res.redirect(`/admin/user/${createdUser.attributes.id}?success=USERCREATED`);
@@ -2249,7 +2304,8 @@ module.exports.load = async function (app, db) {
 
     log(
       `update user`,
-      `${req.session.userinfo.username} updated panel user ${current.username} (${current.id}).`
+      `${req.session.userinfo.username} updated panel user ${current.username} (${current.id}).`,
+      createAdminLogContext(req, current.id, "info", ["user"])
     );
 
     return res.redirect(`/admin/user/${req.params.id}?success=USERUPDATED`);
@@ -2305,7 +2361,8 @@ module.exports.load = async function (app, db) {
 
     log(
       `set plan`,
-      `${req.session.userinfo.username} updated plan for Discord ID ${discordId} to ${packageName || "default"}.`
+      `${req.session.userinfo.username} updated plan for Discord ID ${discordId} to ${packageName || "default"}.`,
+      createAdminLogContext(req, discordId, "info", ["plan"])
     );
 
     return res.redirect(`/admin/user/${req.params.id}?discord=${encodeURIComponent(discordId)}&success=PLANUPDATED`);
@@ -2374,7 +2431,8 @@ module.exports.load = async function (app, db) {
 
     log(
       `set resources`,
-      `${req.session.userinfo.username} adjusted extra resources for Discord ID ${discordId}.`
+      `${req.session.userinfo.username} adjusted extra resources for Discord ID ${discordId}.`,
+      createAdminLogContext(req, discordId, "info", ["resources"])
     );
 
     return res.redirect(`/admin/user/${req.params.id}?discord=${encodeURIComponent(discordId)}&success=RESOURCESUPDATED`);
@@ -2441,7 +2499,8 @@ module.exports.load = async function (app, db) {
 
     log(
       mode === "add" ? `add coins` : `set coins`,
-      `${req.session.userinfo.username} updated coins for Discord ID ${discordId}.`
+      `${req.session.userinfo.username} updated coins for Discord ID ${discordId}.`,
+      createAdminLogContext(req, discordId, "info", ["coins"])
     );
 
     return res.redirect(`/admin/user/${req.params.id}?discord=${encodeURIComponent(discordId)}&success=COINSUPDATED`);
@@ -2492,7 +2551,8 @@ module.exports.load = async function (app, db) {
 
     log(
       `link user`,
-      `${req.session.userinfo.username} linked Discord ID ${discordId} to panel user ${req.params.id}.`
+      `${req.session.userinfo.username} linked Discord ID ${discordId} to panel user ${req.params.id}.`,
+      createAdminLogContext(req, discordId, "info", ["user", "link"])
     );
 
     return res.redirect(`/admin/user/${req.params.id}?discord=${encodeURIComponent(discordId)}&success=LINKED`);
@@ -2569,7 +2629,8 @@ module.exports.load = async function (app, db) {
 
     log(
       `reset password`,
-      `${req.session.userinfo.username} reset the password for panel user ${req.params.id}.`
+      `${req.session.userinfo.username} reset the password for panel user ${req.params.id}.`,
+      createAdminLogContext(req, req.params.id, "warn", ["user", "security"])
     );
 
     return res.redirect(`/admin/user/${req.params.id}?success=PASSWORDRESET&password=${encodeURIComponent(password)}`);
@@ -2638,7 +2699,8 @@ module.exports.load = async function (app, db) {
 
     log(
       `delete user`,
-      `${req.session.userinfo.username} deleted panel user ${req.params.id}.`
+      `${req.session.userinfo.username} deleted panel user ${req.params.id}.`,
+      createAdminLogContext(req, req.params.id, "warn", ["user"])
     );
 
     return res.redirect(`/admin/user?success=USERDELETED`);
@@ -3019,7 +3081,8 @@ module.exports.load = async function (app, db) {
 
     log(
       `create server`,
-      `${req.session.userinfo.username} created server ${serverData.attributes.name} (${serverData.attributes.id}).`
+      `${req.session.userinfo.username} created server ${serverData.attributes.name} (${serverData.attributes.id}).`,
+      createAdminLogContext(req, serverData.attributes.id, "info", ["server"])
     );
 
     return res.redirect(`/admin/server?success=SERVERCREATED`);
@@ -3272,7 +3335,8 @@ module.exports.load = async function (app, db) {
 
     log(
       `update server`,
-      `${req.session.userinfo.username} updated server ${req.params.id}.`
+      `${req.session.userinfo.username} updated server ${req.params.id}.`,
+      createAdminLogContext(req, req.params.id, "info", ["server"])
     );
 
     return res.redirect(`/admin/server/${req.params.id}/edit?success=SERVERUPDATED`);
@@ -3301,7 +3365,8 @@ module.exports.load = async function (app, db) {
 
     log(
       `reinstall server`,
-      `${req.session.userinfo.username} triggered reinstall for server ${req.params.id}.`
+      `${req.session.userinfo.username} triggered reinstall for server ${req.params.id}.`,
+      createAdminLogContext(req, req.params.id, "warn", ["server"])
     );
 
     return res.redirect(`/admin/server/${req.params.id}/edit?success=REINSTALLED`);
@@ -3336,7 +3401,8 @@ module.exports.load = async function (app, db) {
       // Log the action
       log(
         `suspend server`,
-        `${req.session.userinfo.username} suspended server with ID ${serverId}.`
+        `${req.session.userinfo.username} suspended server with ID ${serverId}.`,
+        createAdminLogContext(req, serverId, "warn", ["server"])
       );
       
       return res.redirect(theme.settings.redirect.suspendserver || "/admin/server?success=Server suspended successfully");
@@ -3374,7 +3440,8 @@ module.exports.load = async function (app, db) {
       // Log the action
       log(
         `unsuspend server`,
-        `${req.session.userinfo.username} unsuspended server with ID ${serverId}.`
+        `${req.session.userinfo.username} unsuspended server with ID ${serverId}.`,
+        createAdminLogContext(req, serverId, "info", ["server"])
       );
       
       return res.redirect(theme.settings.redirect.unsuspendserver || "/admin/server?success=Server unsuspended successfully");
@@ -3412,7 +3479,8 @@ module.exports.load = async function (app, db) {
       // Log the action
       log(
         `delete server`,
-        `${req.session.userinfo.username} deleted server with ID ${serverId}.`
+        `${req.session.userinfo.username} deleted server with ID ${serverId}.`,
+        createAdminLogContext(req, serverId, "warn", ["server"])
       );
       
       return res.redirect(theme.settings.redirect.deleteadminserver || "/admin/server?success=Server deleted successfully");

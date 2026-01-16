@@ -143,7 +143,8 @@ module.exports.load = async function (app, db) {
     // Log the purchase
     log(
       `Package Purchased`,
-      `${req.session.userinfo.username}#${req.session.userinfo.discriminator} bought the ${pkg.name} package for \`${pkg.cost}\` coins.`
+      `${req.session.userinfo.username}#${req.session.userinfo.discriminator} bought the ${pkg.name} package for \`${pkg.cost}\` coins.`,
+      { scope: "user", actorId: req.session.userinfo?.id, targetId: userId, severity: "info", tags: ["store", "package"] }
     );
 
     // Redirect
@@ -223,7 +224,8 @@ module.exports.load = async function (app, db) {
 
     log(
       `Resources Purchased`,
-      `${req.session.userinfo.username}#${req.session.userinfo.discriminator} bought ${extraResource} ${type} from the store for \`${purchaseCost}\` coins.`
+      `${req.session.userinfo.username}#${req.session.userinfo.discriminator} bought ${extraResource} ${type} from the store for \`${purchaseCost}\` coins.`,
+      { scope: "user", actorId: req.session.userinfo?.id, targetId: userId, severity: "info", tags: ["store", type] }
     );
 
     res.redirect(

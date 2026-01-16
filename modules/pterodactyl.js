@@ -275,7 +275,14 @@ module.exports.load = async function (app, db) {
 
             log(
               "created server",
-              `${req.session.userinfo.username} created a new server named \`${name}\` with the following specs:\n\`\`\`Memory: ${ram} MB\nCPU: ${cpu}%\nDisk: ${disk}\`\`\``
+              `${req.session.userinfo.username} created a new server named \`${name}\` with the following specs:\n\`\`\`Memory: ${ram} MB\nCPU: ${cpu}%\nDisk: ${disk}\`\`\``,
+              {
+                scope: "user",
+                actorId: req.session.userinfo?.id,
+                targetId: serverinfotext?.attributes?.id || serverinfotext?.id || null,
+                severity: "info",
+                tags: ["server", "create"],
+              }
             );
             return res.redirect("/servers?err=CREATED");
           } else {
@@ -470,11 +477,18 @@ module.exports.load = async function (app, db) {
         if ((await serverinfo.statusText) !== "OK")
           return res.redirect(
             `${redirectlink}?id=${req.query.id}&err=ERRORONMODIFY`
-          );
+        );
         let text = JSON.parse(await serverinfo.text());
         log(
           `modify server`,
-          `${req.session.userinfo.username} modified the server called \`${text.attributes.name}\` to have the following specs:\n\`\`\`Memory: ${ram} MB\nCPU: ${cpu}%\nDisk: ${disk}\`\`\``
+          `${req.session.userinfo.username} modified the server called \`${text.attributes.name}\` to have the following specs:\n\`\`\`Memory: ${ram} MB\nCPU: ${cpu}%\nDisk: ${disk}\`\`\``,
+          {
+            scope: "user",
+            actorId: req.session.userinfo?.id,
+            targetId: text?.attributes?.id || req.query.id,
+            severity: "info",
+            tags: ["server", "modify"],
+          }
         );
         pterorelationshipsserverdata.push(text);
         req.session.pterodactyl.relationships.servers.data =
