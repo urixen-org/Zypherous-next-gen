@@ -1,5 +1,5 @@
 const fs = require("fs");
-const toml = require("@iarna/toml");
+const yaml = require("js-yaml");
 const fetch = require("node-fetch");
 
 const SETTINGS_KEY = "config:settings";
@@ -167,7 +167,8 @@ async function syncEggsFromPanel(db, { force = false } = {}) {
 }
 
 async function init(db, filePath) {
-  const fileSettings = toml.parse(fs.readFileSync(filePath, "utf8"));
+  const rawContent = fs.readFileSync(filePath, "utf8");
+  const fileSettings = yaml.load(rawContent) || {};
   applySettings(fileSettings);
 
   const storedSettings = await db.get(SETTINGS_KEY);

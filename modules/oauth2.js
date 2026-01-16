@@ -8,9 +8,10 @@
 "use strict";
 
 const loadConfig = require("../handlers/config.js");
-const settings = loadConfig("./config.toml");
+const settings = loadConfig("./config.yaml");
 const fetch = require("node-fetch");
 const indexjs = require("../app.js");
+const referralHelper = require("./custom-module.js");
 const log = require("../handlers/log.js");
 const fs = require("fs");
 const { renderFile } = require("ejs");
@@ -30,10 +31,10 @@ if (settings.api.client.oauth2.link.slice(-1) == "/")
     settings.pterodactyl.domain = settings.pterodactyl.domain.slice(0, -1);
 
 /* Ensure platform release target is met */
-const heliactylModule = { "name": "Discord OAuth2", "target_platform": "10.0.0" };
+const zypherousModule = { "name": "Discord OAuth2", "target_platform": "10.0.0" };
 
 /* Module */
-module.exports.heliactylModule = heliactylModule;
+module.exports.ZypherousModule = zypherousModule;
 module.exports.load = async function (app, db) {
     app.get("/login", async (req, res) => {
       // If provider is specified as Google, redirect to Google auth
@@ -83,79 +84,13 @@ module.exports.load = async function (app, db) {
   
     app.get(settings.api.client.oauth2.callbackpath, async (req, res) => {
       if (!req.query.code) return res.redirect(`/login`);
-      res.send(`
-<!doctype html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    @font-face {
-      font-family: "Stack Sans Notch";
-      src: url("/assets/StackSansNotch-VariableFont_wght.ttf")
-        format("truetype-variations");
-      font-weight: 100 900;
-      font-style: normal;
-      font-display: swap;
-    }
-
-    @keyframes slideDown {
-      from {
-        transform: translateY(-100%);
-        opacity: 0;
-      }
-      to {
-        transform: translateY(0);
-        opacity: 1;
-      }
-    }
-    #splashText {
-      animation: slideDown 0.3s ease-out;
-      overflow: hidden;
-      white-space: nowrap;
-    }
-
-    body {
-      font-family: "Inter", "Stack Sans Notch", sans-serif;
-    }
-
-    #splashText {
-      font-family: "Stack Sans Notch", "Inter", sans-serif;
-    }
-  </style>
-</head>
-<body class="bg-[#10181e] flex flex-col items-center justify-center min-h-screen">
-  <div class="flex flex-col items-center">
-    <img src="../assets/spinner.png" class="h-10 w-10 animate-spin">
-    <span id="splashText" class="mt-6 uppercase text-zinc-400/50 text-xs tracking-[0.3em]">...</span>
-  </div>
-  <script>
-    var splashTexts = ["Logging you in.", "Syncing your session."];
-    function updateSplashText() {
-      var randomIndex = Math.floor(Math.random() * splashTexts.length);
-      var splashText = splashTexts[randomIndex];
-      var splashElement = document.getElementById("splashText");
-      splashElement.style.animation = 'none';
-      splashElement.offsetHeight;
-      splashElement.style.animation = 'slideDown 0.3s ease-out';
-      splashElement.textContent = splashText;
-    }
-    setInterval(updateSplashText, 1000);
-    updateSplashText();
-  </script>
-      <script type="text/javascript" defer>
-        history.pushState('/login', 'Logging in...', '/login')
-        window.location.replace('/submitlogin?code=${encodeURIComponent(
-          req.query.code.replace(/'/g, "")
-        )}')
-      </script>
-</body>
-</html>
-`);
+      const sanitizedCode = encodeURIComponent(
+        req.query.code.replace(/'/g, "")
+      );
+      res.render("loading", {
+        settings,
+        redirectCode: sanitizedCode,
+      });
     });
   
     app.get(`/submitlogin`, async (req, res) => {
@@ -517,7 +452,27 @@ module.exports.load = async function (app, db) {
             );
           let cacheaccountinfo = JSON.parse(await cacheaccount.text());
           req.session.pterodactyl = cacheaccountinfo.attributes;
-  
+
+          const pendingReferral = req.session.pendingReferral;
+          if (pendingReferral) {
+            delete req.session.pendingReferral;
+            try {
+              const referralResult = await referralHelper.processReferralClaim(
+                pendingReferral,
+                userinfo.id,
+                db
+              );
+              if (!referralResult.success) {
+                console.debug(
+                  "Referral claim skipped:",
+                  referralResult.error || "Unknown error"
+                );
+              }
+            } catch (error) {
+              console.error("Referral claim failed:", error);
+            }
+          }
+
           req.session.userinfo = userinfo;
           let theme = indexjs.get(req);
           if (customredirect) return res.redirect(customredirect);

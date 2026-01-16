@@ -6,17 +6,17 @@
 
 
 const loadConfig = require("../handlers/config");
-const settings = loadConfig("./config.toml");
+const settings = loadConfig("./config.yaml");
 const indexjs = require("../app.js");
 const ejs = require("ejs");
 const chalk = require("chalk");
 const fs = require("fs");
 
 /* Ensure platform release target is met */
-const heliactylModule = { "name": "ZTX AFK Page", "target_platform": "10.0.0" };
+const zypherousModule = { "name": "ZTX AFK Page", "target_platform": "10.0.0" };
 
 /* Module */
-module.exports.heliactylModule = heliactylModule;
+module.exports.ZypherousModule = zypherousModule;
 module.exports.load = async function(app, db) {
   app.ws("/" + settings.api.afk.path, async (ws, req) => {
     let currentlyonpage = await db.get('afkSessions');

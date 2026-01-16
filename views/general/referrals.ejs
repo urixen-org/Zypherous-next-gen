@@ -96,96 +96,126 @@
   </div>
   
   <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      const referralsContainer = document.querySelector('#referral-codes-container');
-      const totalUsesDisplay = document.querySelector('#total-uses');
-      const createReferralButton = document.getElementById('createRef');
-    
+    document.addEventListener("DOMContentLoaded", function () {
+      const referralsContainer = document.querySelector("#referral-codes-container");
+      const totalUsesDisplay = document.querySelector("#total-uses");
+      const createReferralButton = document.getElementById("createRef");
+
       async function fetchReferrals() {
         try {
-          const response = await fetch('/referral/list', {
-            method: 'GET',
-            credentials: 'include'
+          const response = await fetch("/referral/list", {
+            method: "GET",
+            credentials: "include",
           });
           const data = await response.json();
-          if (data.referrals) {
+          if (Array.isArray(data.referrals)) {
             displayReferrals(data.referrals);
           }
         } catch (error) {
-          console.error('Error fetching referrals:', error);
+          console.error("Error fetching referrals:", error);
         }
       }
-    
+
+      function escapeHtml(value) {
+        if (!value) return "";
+        return value
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      function escapeAttribute(value) {
+        if (!value) return "";
+        return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+      }
+
       function displayReferrals(referrals) {
-        if (referrals.length === 0) {
+        if (!Array.isArray(referrals) || referrals.length === 0) {
           totalUsesDisplay.textContent = "You have no referral codes!";
+          referralsContainer.innerHTML = "";
           return;
         }
-        
-        const html = referrals.map(ref => `
-          <div class="border-b border-neutral-800 pb-4">
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <div>
-                <div class="flex items-center">
-                  <span class="text-white font-medium">${ref.code}</span>
-                  <span class="ml-2 text-xs bg-sky-500/10 text-sky-500 px-2 py-0.5 rounded-full">${ref.uses} uses</span>
+
+        const html = referrals
+          .map((ref) => {
+            const createdDate = ref.created_at
+              ? new Date(ref.created_at).toLocaleDateString()
+              : "Unknown date";
+            const safeLink = escapeHtml(ref.link);
+            const attrLink = escapeAttribute(ref.link);
+            return `
+              <div class="border-b border-neutral-800 pb-4">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div>
+                    <div class="flex items-center">
+                      <span class="text-white font-medium">${escapeHtml(ref.code)}</span>
+                      <span class="ml-2 text-xs bg-sky-500/10 text-sky-500 px-2 py-0.5 rounded-full">${ref.uses || 0} uses</span>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-1">Created on ${createdDate}</p>
+                  </div>
+                  <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <div class="text-xs text-slate-400 break-all">${safeLink || "Link unavailable"}</div>
+                    <button
+                      type="button"
+                      data-link="${attrLink}"
+                      onclick="copyRef(this)"
+                      class="inline-flex items-center text-xs text-white bg-neutral-900 hover:bg-neutral-900 px-3 py-1.5 rounded-full transition-colors"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 mr-1.5 text-sky-500">
+                        <path fill-rule="evenodd" d="M15.988 3.012A2.25 2.25 0 0 1 18 5.25v6.5A2.25 2.25 0 0 1 15.75 14H13.5V7A2.5 2.5 0 0 0 11 4.5H8.128a2.252 2.252 0 0 1 1.884-1.488A2.25 2.25 0 0 1 12.25 1h1.5a2.25 2.25 0 0 1 2.238 2.012ZM11.5 3.25a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 .75.75v.25h-3v-.25Z" clip-rule="evenodd" />
+                        <path fill-rule="evenodd" d="M2 7a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7Zm2 3.25a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1-.75-.75Zm0 3.5a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1-.75-.75Z" clip-rule="evenodd" />
+                      </svg>
+                      Copy Link
+                    </button>
+                  </div>
                 </div>
-                <p class="text-xs text-slate-400 mt-1">Created on ${new Date(ref.created_at).toLocaleDateString()}</p>
               </div>
-              <button onclick="copyRef('${ref.code}')" class="inline-flex items-center text-xs text-white bg-neutral-900 hover:bg-neutral-900 px-3 py-1.5 rounded-full transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 mr-1.5 text-sky-500">
-                  <path fill-rule="evenodd" d="M15.988 3.012A2.25 2.25 0 0 1 18 5.25v6.5A2.25 2.25 0 0 1 15.75 14H13.5V7A2.5 2.5 0 0 0 11 4.5H8.128a2.252 2.252 0 0 1 1.884-1.488A2.25 2.25 0 0 1 12.25 1h1.5a2.25 2.25 0 0 1 2.238 2.012ZM11.5 3.25a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 .75.75v.25h-3v-.25Z" clip-rule="evenodd" />
-                  <path fill-rule="evenodd" d="M2 7a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7Zm2 3.25a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1-.75-.75Zm0 3.5a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1-.75-.75Z" clip-rule="evenodd" />
-                </svg>
-                Copy Link
-              </button>
-            </div>
-          </div>
-        `).join('');
-        
+            `;
+          })
+          .join("");
+
         referralsContainer.innerHTML = html;
-        const totalUses = referrals.reduce((acc, ref) => acc + ref.uses, 0);
+        const totalUses = referrals.reduce((acc, ref) => acc + (ref.uses || 0), 0);
         totalUsesDisplay.textContent = `Your referral links have had a total of ${totalUses} uses.`;
       }
-    
-      // Event listeners
-      createReferralButton.addEventListener('click', createReferralCode);
-    
+
+      createReferralButton.addEventListener("click", createReferralCode);
+
       async function createReferralCode() {
         try {
-          const response = await fetch('/referral/create', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include'
+          const response = await fetch("/referral/create", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
           });
           const data = await response.json();
           if (data.code) {
-            fetchReferrals(); // Refresh the list after adding a new code
+            fetchReferrals();
           } else {
-            console.error('Failed to create referral code:', data.error);
+            console.error("Failed to create referral code:", data.error);
           }
         } catch (error) {
-          console.error('Error creating referral code:', error);
+          console.error("Error creating referral code:", error);
         }
       }
-    
-      // Initial load
+
       fetchReferrals();
     });
-    
-    // Global function for the onclick handler
-    function copyRef(code) {
-      const fullLink = `<%= settings.api.client.oauth2.link %>/${code}`;
+
+    function copyRef(button) {
+      const fullLink = button && button.dataset ? button.dataset.link : "";
+      if (!fullLink) return;
+
       navigator.clipboard.writeText(fullLink);
-      
-      // Show a temporary success message
-      const toast = document.createElement('div');
-      toast.className = 'fixed bottom-4 right-4 bg-sky-500 text-white px-4 py-2 rounded-sm shadow-sm z-50';
-      toast.textContent = 'Referral link copied!';
+
+      const toast = document.createElement("div");
+      toast.className = "fixed bottom-4 right-4 bg-sky-500 text-white px-4 py-2 rounded-sm shadow-sm z-50";
+      toast.textContent = "Referral link copied!";
       document.body.appendChild(toast);
-      
+
       setTimeout(() => {
-        toast.classList.add('fade-out');
+        toast.classList.add("fade-out");
         setTimeout(() => {
           document.body.removeChild(toast);
         }, 300);

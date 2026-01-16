@@ -37,7 +37,7 @@ if (typeof atob === "undefined") {
 
 // Load settings.
 const loadConfig = require("./handlers/config");
-const settings = loadConfig("./config.toml");
+const settings = loadConfig("./config.yaml");
 const settingsStore = require("./handlers/settings-store");
 
 
@@ -101,6 +101,20 @@ function generateRandomId(length = 6) {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
 
+function getOrderedModuleFiles() {
+  const moduleFiles = fs
+    .readdirSync("./modules")
+    .filter((file) => file.endsWith(".js"));
+
+  const maintenanceIndex = moduleFiles.indexOf("maintenance.js");
+  if (maintenanceIndex !== -1) {
+    moduleFiles.splice(maintenanceIndex, 1);
+    moduleFiles.unshift("maintenance.js");
+  }
+
+  return moduleFiles;
+}
+
 const workerIds = {};
 
 function startCluster() {
@@ -125,7 +139,7 @@ if (cluster.isMaster) {
 
   function startApp() {
     // Create tree view of modules in /modules/
-    let moduleFiles = fs.readdirSync("./modules").filter((file) => file.endsWith(".js"));
+    const moduleFiles = getOrderedModuleFiles();
     const settingsVersion = settings.version;
   
     console.log(chalk.gray("Loading modules tree..."));
@@ -172,7 +186,7 @@ if (cluster.isMaster) {
     
     // Watch for file changes and reboot workers
     const watcher = chokidar.watch('./modules');
-    const watcher2 = chokidar.watch('./config.toml');
+    const watcher2 = chokidar.watch('./config.yaml');
     watcher.on('change', (path) => {
       console.log(chalk.yellow(`File changed: ${path}. Rebooting workers...`));
       for (const id in cluster.workers) {
@@ -276,13 +290,13 @@ if (cluster.isMaster) {
     next();
   });
 
-  // Load the API files.
-  let apifiles = fs.readdirSync("./modules").filter((file) => file.endsWith(".js"));
+    // Load the API files.
+    const moduleFiles = getOrderedModuleFiles();
 
-  apifiles.forEach((file) => {
-    let apifile = require(`./modules/${file}`);
-    apifile.load(app, db);
-  });
+    moduleFiles.forEach((file) => {
+      let apifile = require(`./modules/${file}`);
+      apifile.load(app, db);
+    });
 
   app.all("*", async (req, res) => {
     if (req.session.pterodactyl)
@@ -342,7 +356,7 @@ if (cluster.isMaster) {
 }
 
 settingsStore
-  .init(db, "./config.toml")
+  .init(db, "./config.yaml")
   .then(() => {
     settingsStore.startAutoRefresh(db);
     startCluster();

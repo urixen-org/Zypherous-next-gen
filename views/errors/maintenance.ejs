@@ -1,0 +1,30 @@
+<html class="h-full">
+
+<%- include('../components/head') %>
+
+<body class="min-h-screen bg-neutral-950 text-slate-100">
+  <main class="grid min-h-full place-items-center px-6 py-24 sm:py-32 lg:px-8">
+    <div class="text-center px-6 py-8 bg-neutral-900/80 border border-neutral-800/70 rounded-2xl shadow-xl max-w-2xl">
+      <p class="text-base font-semibold text-sky-500">Maintenance</p>
+      <h1 class="mt-4 text-3xl font-bold tracking-tight text-white sm:text-5xl">We'll be right back</h1>
+      <p class="mt-6 text-base leading-7 text-slate-400">
+        <%= message || "We're currently performing scheduled maintenance. Please check back later." %>
+      </p>
+      <div class="mt-10 flex flex-col gap-3 sm:flex-row sm:justify-center">
+        <a
+          href="<%= settings.website.url || '/' %>"
+          class="inline-flex items-center justify-center rounded-xl border border-transparent bg-white/5 px-5 py-3 text-sm font-semibold text-white hover:bg-white/10 transition-colors"
+        >
+          Return home
+        </a>
+        <a
+          href="<%= settings.website.discord || '#' %>"
+          class="inline-flex items-center justify-center rounded-xl border border-slate-700 bg-sky-500 px-5 py-3 text-sm font-semibold text-white hover:bg-sky-400 transition-colors"
+        >
+          Join Discord
+        </a>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

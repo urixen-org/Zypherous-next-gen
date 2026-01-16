@@ -8,7 +8,7 @@
 "use strict";
 
 const loadConfig = require("../handlers/config.js");
-const settings = loadConfig("./config.toml");
+const settings = loadConfig("./config.yaml");
 const fetch = require("node-fetch");
 const indexjs = require("../app.js");
 const log = require("../handlers/log.js");
@@ -28,10 +28,10 @@ if (settings.pterodactyl.domain.slice(-1) == "/")
   settings.pterodactyl.domain = settings.pterodactyl.domain.slice(0, -1);
 
 /* Ensure platform release target is met */
-const heliactylModule = { "name": "Google OAuth", "target_platform": "10.0.0" };
+const zypherousModule = { "name": "Google OAuth", "target_platform": "10.0.0" };
 
 /* Module */
-module.exports.heliactylModule = heliactylModule;
+module.exports.ZypherousModule = zypherousModule;
 module.exports.load = async function (app, db) {
   // Configure Google OAuth Strategy
   passport.use(new GoogleStrategy({
@@ -269,79 +269,16 @@ module.exports.load = async function (app, db) {
         });
       }
 
-      // Now show the loading screen with direct redirect to dashboard
-      res.send(`
-<!doctype html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Space+Grotesk:wght@300..700&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
-  <style>
-    @keyframes slideDown {
-      from {
-        transform: translateY(-100%);
-        opacity: 0;
-      }
-      to {
-        transform: translateY(0);
-        opacity: 1;
-      }
+      // Show themed loading screen before redirecting to dashboard
+      res.render("loading", {
+        settings,
+        redirectPath: "/dashboard",
+        redirectDelay: 2000,
+      });
+    } catch (error) {
+      return res.redirect('/?error=auth_error&provider=google');
     }
-    #splashText {
-      animation: slideDown 0.3s ease-out;
-      overflow: hidden;
-      white-space: nowrap;
-    }
-    @keyframes spin {
-      from {
-        transform: rotate(0deg);
-      }
-      to {
-        transform: rotate(360deg);
-      }
-    }
-    .custom-spin {
-      animation: spin 1s linear infinite;
-    }
-  </style>
-</head>
-<body class="bg-[#10181e] flex flex-col items-center justify-center min-h-screen">
-  <div class="flex flex-col items-center">
-    <img src="/assets/spinner.png" class="h-10 w-10 custom-spin">
-    <span id="splashText" style="font-family: 'Space Grotesk'" class="mt-6 uppercase text-zinc-400/50 text-sm tracking-widest">Logging you in...</span>
-  </div>
-  <script>
-    var splashTexts = ["Inventing new colors for the rainbow.", "Calculating the meaning of life."];
-    function updateSplashText() {
-      var randomIndex = Math.floor(Math.random() * splashTexts.length);
-      var splashText = splashTexts[randomIndex];
-      var splashElement = document.getElementById("splashText");
-      splashElement.style.animation = 'none';
-      splashElement.offsetHeight;
-      splashElement.style.animation = 'slideDown 0.3s ease-out';
-      splashElement.textContent = splashText;
-    }
-    
-    // Update splash text periodically
-    setInterval(updateSplashText, 1500);
-    updateSplashText();
-    
-    // Redirect after a short delay
-    setTimeout(function() {
-      window.location.href = '/dashboard';
-    }, 2000);
-  </script>
-</body>
-</html>
-    `);
-  } catch (error) {
-    return res.redirect('/?error=auth_error&provider=google');
-  }
-});
+  });
   
   // Helper function to create Pterodactyl user
 async function createPterodactylUser(email, username, displayName) {

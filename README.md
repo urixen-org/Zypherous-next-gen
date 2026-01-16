@@ -41,12 +41,12 @@ Warning: You need Pterodactyl already set up on a domain for this method to work
 - `apt-get update && apt-get install libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev build-essential`
 - `cd /var/www/Zypherous && npm i`
 
-After configuring settings.json, to start the server, use `node app.js`</br>
+After configuring `config.yaml`, to start the server, use `node app.js`</br>
 To run in the background, use PM2 (see PM2 section)</br>
 
 ## 2. Setting up webserver
 
-<strong>2.1</strong> Rename exemple_settings.json to settings.json and configure settings.json (specify panel domain/apikey and discord auth settings for it to work)
+<strong>2.1</strong> Copy `config-example.yaml` to `config.yaml` and configure it (specify panel domain/apikey and discord auth settings for it to work)
 
 <strong>2.2</strong> Start the server (Ignore the 2 strange errors that might come up)
 

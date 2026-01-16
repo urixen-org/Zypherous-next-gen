@@ -8,7 +8,7 @@
 const indexjs = require("../app.js");
 const adminjs = require("./admin.js");
 const loadConfig = require("../handlers/config");
-const settings = loadConfig("./config.toml");
+const settings = loadConfig("./config.yaml");
 const fs = require("fs");
 const ejs = require("ejs");
 const log = require("../handlers/log.js");
@@ -18,10 +18,10 @@ const REWARD_AMOUNT = 150;
 const DAY_IN_MILLISECONDS = 86400000;
 
 /* Ensure platform release target is met */
-const heliactylModule = { "name": "Resources Store", "target_platform": "10.0.0" };
+const zypherousModule = { "name": "Resources Store", "target_platform": "10.0.0" };
 
 /* Module */
-module.exports.heliactylModule = heliactylModule;
+module.exports.ZypherousModule = zypherousModule;
 module.exports.load = async function (app, db) {
   // Define packages from config
   const packages = [];

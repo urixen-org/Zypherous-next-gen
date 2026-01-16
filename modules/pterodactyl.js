@@ -6,7 +6,7 @@
 
 
 const loadConfig = require("../handlers/config");
-const settings = loadConfig("./config.toml");
+const settings = loadConfig("./config.yaml");
 const fetch = require("node-fetch");
 const indexjs = require("../app.js");
 const adminjs = require("./admin.js");
@@ -21,10 +21,10 @@ if (settings.pterodactyl)
   }
 
 /* Ensure platform release target is met */
-const heliactylModule = { "name": "Pterodactyl", "target_platform": "10.0.0" };
+const zypherousModule = { "name": "Pterodactyl", "target_platform": "10.0.0" };
 
 /* Module */
-module.exports.heliactylModule = heliactylModule;
+module.exports.ZypherousModule = zypherousModule;
 module.exports.load = async function (app, db) {
   app.get("/updateinfo", async (req, res) => {
     if (!req.session.pterodactyl) return res.redirect("/login");
@@ -61,7 +61,7 @@ module.exports.load = async function (app, db) {
         });
         if (!cacheaccount) {
           return res.send(
-            "Heliactyl failed to find an account on the configured panel, try relogging"
+            "Zypherous failed to find an account on the configured panel, try relogging"
           );
         }
         req.session.pterodactyl = cacheaccount.attributes;

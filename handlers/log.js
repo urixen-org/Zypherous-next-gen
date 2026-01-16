@@ -1,5 +1,5 @@
 const loadConfig = require("../handlers/config");
-const settings = loadConfig("./config.toml");
+const settings = loadConfig("./config.yaml");
 const fetch = require('node-fetch')
 
 /**
@@ -23,10 +23,10 @@ module.exports = (action, message) => {
                     title: `Event: \`${action}\``,
                     description: message,
                     author: {
-                        name: 'Heliactyl Logging'
+                        name: 'Zypherous Logging'
                     },
                     thumbnail: {
-                        url: 'https://atqr.pages.dev/favicon2.png' // This is the default Heliactyl logo, you can change it if you want.
+                        url: 'https://atqr.pages.dev/favicon2.png' // This is the default Zypherous logo, you can change it if you want.
                     }
                 }
             ]

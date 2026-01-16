@@ -1,5 +1,5 @@
 node_modules/
-config.toml
+config.yaml
 heliactyl3.db
 .vscode/
 package-lock.json

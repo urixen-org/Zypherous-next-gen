@@ -38,8 +38,25 @@
                   <div class="lg:pr-16">
                     <h1 class="text-4xl font-bold tracking-tight text-white sm:text-5xl xl:text-6xl">You've been invited to join <%= settings.name %>!</h1>
                     <p class="mt-4 text-md tracking-tight text-slate-400">We're the #1 free server hosting service globally, powering over 20K game servers.</p>
-                    <div class="mt-6">
-                      <a href="../" class="inline-block rounded-sm border border-transparent bg-sky-500 px-8 py-3 font-medium text-white transition">Get started</a>
+                    <div class="mt-6 space-y-3">
+                      <div class="text-sm text-slate-400">Share this link with friends to unlock bonuses.</div>
+                      <div class="rounded-sm bg-neutral-900/60 border border-neutral-800 px-4 py-3 font-mono text-sky-400 break-words">
+                        <code><%= referralLink || '/' %></code>
+                      </div>
+                      <div class="text-sm text-slate-400">
+                        They earn <span class="font-semibold text-white"><%= referralRewards ? referralRewards.referee : '0' %> <%= settings.website.coins %></span>
+                        and you earn <span class="font-semibold text-white"><%= referralRewards ? referralRewards.creator : '0' %> <%= settings.website.coins %></span> when they claim the code.
+                      </div>
+                      <% if (referral && typeof referral.uses !== 'undefined') { %>
+                        <div class="text-xs text-slate-500">
+                          This code has been used <%= referral.uses %> time<%= referral.uses === 1 ? '' : 's' %>.
+                        </div>
+                      <% } %>
+                      <div class="mt-3">
+                        <a href="../" class="inline-flex items-center rounded-sm border border-transparent bg-sky-500 px-8 py-3 font-medium text-white transition">
+                          Get started
+                        </a>
+                      </div>
                     </div>
                   </div>
                 </div>

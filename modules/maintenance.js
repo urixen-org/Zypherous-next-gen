@@ -7,13 +7,13 @@
 
 const loadConfig = require("../handlers/config");
 const settingsStore = require("../handlers/settings-store");
-const settings = loadConfig("./config.toml");
+const settings = loadConfig("./config.yaml");
 
 /* Ensure platform release target is met */
-const heliactylModule = { "name": "Maintenance", "target_platform": "10.0.0" };
+const zypherousModule = { "name": "Maintenance", "target_platform": "10.0.0" };
 
 /* Module */
-module.exports.heliactylModule = heliactylModule;
+module.exports.ZypherousModule = zypherousModule;
 module.exports.load = async function (app, db) {
   // Check if maintenance settings exist in config
   if (!settings.maintenance) {

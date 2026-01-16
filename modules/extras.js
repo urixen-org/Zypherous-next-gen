@@ -6,17 +6,17 @@
 
 
 const loadConfig = require("../handlers/config.js");
-const settings = loadConfig("./config.toml");
+const settings = loadConfig("./config.yaml");
 const fs = require("fs");
 const indexjs = require("../app.js");
 const fetch = require("node-fetch");
 const Queue = require("../handlers/queue.js");
 
 /* Ensure platform release target is met */
-const heliactylModule = { "name": "Extra Features", "target_platform": "10.0.0" };
+const zypherousModule = { "name": "Extra Features", "target_platform": "10.0.0" };
 
 /* Module */
-module.exports.heliactylModule = heliactylModule;
+module.exports.ZypherousModule = zypherousModule;
 module.exports.load = async function (app, db) {
   app.get("/panel", async (req, res) => {
     res.redirect(settings.pterodactyl.domain);

@@ -108,7 +108,57 @@
                   </div>
                   <div class="flex items-center justify-between">
                     <span class="text-slate-400">Maintenance Mode</span>
-                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium <%= adminSettings.maintenance.enabled ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400' %>"><%= adminSettings.maintenance.enabled ? 'Enabled' : 'Disabled' %></span>
+                    <span
+                      id="maintenanceIndicator"
+                      class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium <%= adminSettings.maintenance.enabled ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400' %>"
+                    ><%= adminSettings.maintenance.enabled ? 'Enabled' : 'Disabled' %></span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bg-neutral-900/60 rounded-sm p-5 border-t border-neutral-800/70 shadow-sm">
+                <h3 class="text-base font-semibold text-white">Maintenance</h3>
+                <p class="text-xs text-slate-400 mt-1">Control planned downtime and messaging.</p>
+                <div class="mt-4 space-y-3 text-sm">
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Enable maintenance</span>
+                    <label class="inline-flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="maintenanceEnabledInput"
+                        class="h-4 w-4 rounded border-neutral-700 bg-neutral-900 text-sky-500 focus:ring-white"
+                        <%= adminSettings.maintenance.enabled ? 'checked' : '' %>
+                      />
+                      <span class="text-white text-sm">Toggle</span>
+                    </label>
+                  </div>
+                  <div>
+                    <label for="maintenanceMessageInput" class="text-slate-400 text-xs block mb-1">Message</label>
+                    <textarea
+                      id="maintenanceMessageInput"
+                      rows="3"
+                      class="w-full rounded-sm border border-neutral-800 bg-neutral-950/70 px-3 py-2 text-xs text-slate-200 focus:border-sky-500 focus:outline-none"
+                    ><%= adminSettings.maintenance.message %></textarea>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Allow admin bypass</span>
+                    <input
+                      type="checkbox"
+                      id="maintenanceAllowAdmins"
+                      class="h-4 w-4 rounded border-neutral-700 bg-neutral-900 text-sky-500 focus:ring-white"
+                      <%= adminSettings.maintenance.allowAdmins ? 'checked' : '' %>
+                    />
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <button
+                      type="button"
+                      id="maintenanceSaveButton"
+                      class="rounded-sm border border-neutral-800 bg-white/5 px-4 py-2 text-sm font-medium text-white hover:bg-white/10"
+                      onclick="saveMaintenanceSettings()"
+                    >
+                      Save maintenance settings
+                    </button>
+                    <span id="maintenanceUpdateStatus" class="text-xs text-slate-400"></span>
                   </div>
                 </div>
               </div>
@@ -506,6 +556,56 @@
       if (response.ok) {
         location.reload();
       }
+    }
+    
+    function refreshMaintenanceIndicator(enabled) {
+      const indicator = document.getElementById("maintenanceIndicator");
+      if (!indicator) return;
+      indicator.textContent = enabled ? "Enabled" : "Disabled";
+      indicator.className = `inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+        enabled ? "bg-amber-500/20 text-amber-400" : "bg-emerald-500/20 text-emerald-400"
+      }`;
+    }
+
+    async function saveMaintenanceSettings() {
+      const enabledInput = document.getElementById("maintenanceEnabledInput");
+      const allowAdminsInput = document.getElementById("maintenanceAllowAdmins");
+      const messageInput = document.getElementById("maintenanceMessageInput");
+      const status = document.getElementById("maintenanceUpdateStatus");
+      if (!enabledInput || !allowAdminsInput || !messageInput || !status) return;
+
+      const payload = {
+        enabled: enabledInput.checked,
+        allowAdmins: allowAdminsInput.checked,
+        message: messageInput.value,
+      };
+
+      status.textContent = "Saving...";
+
+      try {
+        const response = await fetch("/admin/settings/maintenance", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const result = await response.json();
+        if (response.ok && result.ok) {
+          status.textContent = "Saved";
+          refreshMaintenanceIndicator(result.maintenance.enabled);
+        } else {
+          status.textContent = "Failed";
+        }
+      } catch (error) {
+        console.error("Maintenance update failed:", error);
+        status.textContent = "Failed";
+      }
+    }
+
+    const maintenanceToggle = document.getElementById("maintenanceEnabledInput");
+    if (maintenanceToggle) {
+      maintenanceToggle.addEventListener("change", () => {
+        refreshMaintenanceIndicator(maintenanceToggle.checked);
+      });
     }
 
     async function saveConfig() {

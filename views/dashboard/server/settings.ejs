@@ -1,0 +1,80 @@
+<%- include('../../components/head') %>
+
+<body class="min-h-screen bg-neutral-950 text-slate-100">
+  <%- include('../../components/modal') %>
+  <div>
+    <%- include('../../components/navigation') %>
+    <div class="md:pl-64 flex flex-col flex-1 min-h-screen">
+      <%- include('../../components/header') %>
+      <main class="flex-1 pb-8">
+        <div class="py-4 md:py-6">
+          <%- include('../../components/skeleton') %>
+          <div class="hidden max-w-screen-2xl mx-auto px-4 sm:px-6 md:px-8" id="content">
+            <%- include('./header') %>
+            <%- include('./tabs') %>
+
+            <div class="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div class="bg-neutral-900/60 border border-neutral-800/80 rounded-2xl p-6 space-y-4">
+                <div>
+                  <p class="text-xs uppercase tracking-[0.3em] text-slate-500">Build</p>
+                  <h2 class="text-xl font-semibold text-white">Server limits</h2>
+                </div>
+                <div class="grid grid-cols-3 gap-4">
+                  <div class="rounded-2xl bg-neutral-950/70 border border-neutral-800/70 p-4 text-sm">
+                    <div class="text-[0.65rem] uppercase tracking-[0.3em] text-slate-500">Memory</div>
+                    <p class="text-xl font-semibold text-white mt-1"><%= server.attributes.limits && server.attributes.limits.memory ? (server.attributes.limits.memory / 1024).toFixed(2) : "0" %> GB</p>
+                  </div>
+                  <div class="rounded-2xl bg-neutral-950/70 border border-neutral-800/70 p-4 text-sm">
+                    <div class="text-[0.65rem] uppercase tracking-[0.3em] text-slate-500">CPU</div>
+                    <p class="text-xl font-semibold text-white mt-1"><%= server.attributes.limits && server.attributes.limits.cpu ? (server.attributes.limits.cpu / 100).toFixed(2) : "0" %> cores</p>
+                  </div>
+                  <div class="rounded-2xl bg-neutral-950/70 border border-neutral-800/70 p-4 text-sm">
+                    <div class="text-[0.65rem] uppercase tracking-[0.3em] text-slate-500">Disk</div>
+                    <p class="text-xl font-semibold text-white mt-1"><%= server.attributes.limits && server.attributes.limits.disk ? (server.attributes.limits.disk / 1024).toFixed(2) : "0" %> GB</p>
+                  </div>
+                </div>
+                <div class="rounded-2xl bg-neutral-950/70 border border-neutral-800/70 p-4 text-sm text-slate-400">
+                  <p>Container image: <span class="text-white font-semibold"><%= server.attributes.build && server.attributes.build.image ? server.attributes.build.image : "Default" %></span></p>
+                  <p>Environment: <span class="text-white font-semibold"><%= server.attributes.build && server.attributes.build.environment ? server.attributes.build.environment : "N/A" %></span></p>
+                </div>
+              </div>
+
+              <div class="bg-neutral-900/60 border border-neutral-800/80 rounded-2xl p-6 space-y-4">
+                <div>
+                  <p class="text-xs uppercase tracking-[0.3em] text-slate-500">Identifiers</p>
+                  <h2 class="text-xl font-semibold text-white">Access details</h2>
+                </div>
+                <dl class="space-y-3 text-sm text-slate-300">
+                  <div class="flex items-center justify-between">
+                    <dt class="text-xs uppercase tracking-[0.3em] text-slate-500">Server ID</dt>
+                    <dd class="text-white font-semibold"><%= server.attributes.id %></dd>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <dt class="text-xs uppercase tracking-[0.3em] text-slate-500">Identifier</dt>
+                    <dd class="text-white font-semibold"><%= server.attributes.identifier %></dd>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <dt class="text-xs uppercase tracking-[0.3em] text-slate-500">Owner</dt>
+                    <dd class="text-white font-semibold"><%= server.attributes.owner ? server.attributes.owner : "Panel owner" %></dd>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <dt class="text-xs uppercase tracking-[0.3em] text-slate-500">Node</dt>
+                    <dd class="text-white font-semibold"><%= (server.relationships && server.relationships.node && server.relationships.node.attributes && server.relationships.node.attributes.name) || "Unknown node" %></dd>
+                  </div>
+                </dl>
+                <div class="rounded-2xl bg-neutral-950/70 border border-neutral-800/70 p-4 text-sm text-slate-400">
+                  <p class="font-semibold text-white">Startup command</p>
+                  <p class="text-xs text-slate-300">
+                    <%= server.attributes.build && server.attributes.build.startup ? server.attributes.build.startup : "Default" %>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+      <%- include('../../components/footer') %>
+    </div>
+  </div>
+  <%- include('../../components/notifications') %>
+</body>

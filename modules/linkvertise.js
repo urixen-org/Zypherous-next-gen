@@ -5,7 +5,7 @@
  */
 
 const loadConfig = require("../handlers/config");
-const settings = loadConfig("./config.toml");
+const settings = loadConfig("./config.yaml");
 
 module.exports.load = async function (app, db) {
 if (settings.linkvertise.enabled) {

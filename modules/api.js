@@ -6,7 +6,7 @@
 
 
 const loadConfig = require("../handlers/config.js");
-const settings = loadConfig("./config.toml");
+const settings = loadConfig("./config.yaml");
 const indexjs = require("../app.js");
 const adminjs = require("./admin.js");
 const fs = require("fs");
@@ -19,10 +19,10 @@ const arciotext = require("../handlers/afk");
 const myCache = new NodeCache({ deleteOnExpire: true, stdTTL: 59 });
 
 /* Ensure platform release target is met */
-const heliactylModule = { "name": "Heliactyl API 3.0 Beta", "target_platform": "10.0.0" };
+const zypherousModule = { "name": "Zypherous API 3.0 Beta", "target_platform": "10.0.0" };
 
 /* Module */
-module.exports.heliactylModule = heliactylModule;
+module.exports.ZypherousModule = zypherousModule;
 module.exports.load = async function (app, db) {
     /**
    * GET /giftcoins
@@ -338,7 +338,7 @@ module.exports.load = async function (app, db) {
    * @returns {Object|null} - The settings object if authorized, otherwise null.
    */
   async function check(req, res) {
-    let settings = loadConfig("./config.toml");
+    let settings = loadConfig("./config.yaml");
     if (settings.api.client.api.enabled == true) {
       let auth = req.headers["authorization"];
       if (auth) {

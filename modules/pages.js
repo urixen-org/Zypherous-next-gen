@@ -8,15 +8,15 @@ const indexjs = require("../app.js");
 const ejs = require("ejs");
 const express = require("express");
 const loadConfig = require("../handlers/config");
-const settings = loadConfig("./config.toml");
+const settings = loadConfig("./config.yaml");
 const fetch = require("node-fetch");
 const arciotext = require("../handlers/afk.js");
 
 /* Ensure platform release target is met */
-const heliactylModule = { "name": "Pages", "target_platform": "10.0.0" };
+const zypherousModule = { "name": "Pages", "target_platform": "10.0.0" };
 
 /* Module */
-module.exports.heliactylModule = heliactylModule;
+module.exports.ZypherousModule = zypherousModule;
 module.exports.load = async function (app, db) {
   app.all("/", async (req, res) => {
     try {

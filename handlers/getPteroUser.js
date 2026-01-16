@@ -1,6 +1,6 @@
 const fetch = require("node-fetch");
 const loadConfig = require("../handlers/config");
-const settings = loadConfig("./config.toml");
+const settings = loadConfig("./config.yaml");
 
 module.exports = (userid, db) => {
   return new Promise(async (resolve, err) => {

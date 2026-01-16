@@ -7,7 +7,7 @@
 
 const loadConfig = require("../handlers/config");
 const settingsStore = require("../handlers/settings-store");
-const settings = loadConfig("./config.toml");
+const settings = loadConfig("./config.yaml");
 
 if (settings.pterodactyl)
   if (settings.pterodactyl.domain) {
@@ -27,7 +27,15 @@ const axios = require('axios');
 const semver = require('semver');
 
 /* Ensure platform release target is met */
-const heliactylModule = { "name": "Admin", "target_platform": "10.0.0" };
+const zypherousModule = { "name": "Admin", "target_platform": "10.0.0" };
+
+const DEFAULT_MAINTENANCE_MESSAGE = "We're currently performing scheduled maintenance. Please check back later.";
+
+function parseBoolean(value, fallback = false) {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") return value.toLowerCase() === "true";
+  return fallback;
+}
 
 function maskSecret(value) {
   if (!value) return null;
@@ -55,7 +63,7 @@ function parseLogEntries(content) {
 }
 
 /* Module */
-module.exports.heliactylModule = heliactylModule;
+module.exports.ZypherousModule = zypherousModule;
 module.exports.load = async function (app, db) {
   app.get("/setcoins", async (req, res) => {
     let theme = indexjs.get(req);
@@ -1066,8 +1074,8 @@ module.exports.load = async function (app, db) {
 
     const maintenance = settings.maintenance || {
       enabled: false,
-      allowAdmins: false,
-      message: "",
+      allowAdmins: true,
+      message: DEFAULT_MAINTENANCE_MESSAGE,
     };
 
     const adminSettings = {
@@ -1117,6 +1125,8 @@ module.exports.load = async function (app, db) {
       },
       maintenance: {
         enabled: maintenance.enabled === true,
+        allowAdmins: maintenance.allowAdmins === true,
+        message: maintenance.message || DEFAULT_MAINTENANCE_MESSAGE,
       },
       secrets: {
         websiteSecret: maskSecret(settings.website.secret),
@@ -1219,6 +1229,40 @@ module.exports.load = async function (app, db) {
 
     await settingsStore.save(db, settings);
     return res.json({ ok: true });
+  });
+
+  app.post("/admin/settings/maintenance", async (req, res) => {
+    if (!req.session.pterodactyl || req.session.pterodactyl.root_admin !== true)
+      return res.status(403).json({ ok: false, error: "unauthorized" });
+
+    const payload = req.body || {};
+    const existingMaintenance = settings.maintenance || {
+      enabled: false,
+      allowAdmins: true,
+      message: DEFAULT_MAINTENANCE_MESSAGE,
+    };
+
+    const enabled = parseBoolean(payload.enabled, existingMaintenance.enabled === true);
+    const allowAdmins = parseBoolean(
+      payload.allowAdmins,
+      existingMaintenance.allowAdmins !== false
+    );
+    const messageText =
+      typeof payload.message === "string"
+        ? payload.message.trim()
+        : existingMaintenance.message || DEFAULT_MAINTENANCE_MESSAGE;
+
+    settings.maintenance = {
+      enabled,
+      allowAdmins,
+      message: messageText || DEFAULT_MAINTENANCE_MESSAGE,
+    };
+
+    await settingsStore.save(db, settings);
+    return res.json({
+      ok: true,
+      maintenance: settings.maintenance,
+    });
   });
 
   app.post("/admin/settings/packages/update", async (req, res) => {

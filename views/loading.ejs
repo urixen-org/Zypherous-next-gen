@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html class="h-full">
+  <%- include('./components/head') %>
+
+  <body class="min-h-screen bg-neutral-950 text-slate-100 font-sans">
+    <main class="min-h-screen flex items-center justify-center px-4">
+      <div
+        class="w-full max-w-6xl mx-auto p-8 grid gap-8 md:grid-cols-2 items-center md:items-stretch"
+      >
+        <div
+          class="hidden md:block md:relative md:h-full md:min-h-[420px] md:overflow-hidden md:rounded-3xl md:border md:border-neutral-800/80 md:shadow-2xl"
+        >
+          <img
+            src="https://i.pinimg.com/736x/8f/4f/45/8f4f4531bcf08076e7a5e53652e9738e.jpg"
+            alt="Minecraft aesthetic background"
+            class="w-full h-full object-cover md:absolute md:inset-0"
+          />
+        </div>
+        <section
+          class="w-full max-w-sm h-min justify-self-center md:justify-self-end rounded-2xl border border-neutral-800/80 bg-neutral-950/80 px-6 py-10 md:px-8"
+        >
+          <div class="flex items-center justify-center gap-1 text-2xl font-brand">
+            <img
+              src="<%= settings.homepage_logo || settings.logo %>"
+              alt="<%= settings.name %> Logo"
+              class="h-10 w-auto object-contain invert"
+            />
+            <%= settings.name %>
+          </div>
+
+          <div class="mt-10 flex flex-col items-center gap-5 text-center">
+            <div class="loader" aria-hidden="true"></div>
+            <p class="text-2xl font-semibold tracking-tight">Logging in</p>
+            <p class="text-xs uppercase tracking-[0.4em] text-slate-400">
+              Please wait
+            </p>
+          </div>
+
+          <p class="mt-10 text-center text-xs text-slate-500">
+            &copy; <%= new Date().getFullYear() %> <%= settings.name %>
+          </p>
+        </section>
+      </div>
+    </main>
+
+    <script type="text/javascript">
+      history.pushState('/login', 'Logging in...', '/login');
+      <% if (typeof redirectCode !== "undefined" && redirectCode) { %>
+        window.location.replace('/submitlogin?code=<%= redirectCode %>');
+      <% } else if (typeof redirectPath !== "undefined" && redirectPath) { %>
+        setTimeout(function () {
+          window.location.href = '<%= redirectPath %>';
+        }, <%= redirectDelay || 0 %>);
+      <% } %>
+    </script>
+  </body>
+</html>

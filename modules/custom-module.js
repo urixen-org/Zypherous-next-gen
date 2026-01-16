@@ -4,88 +4,236 @@
  * 
  */
 
-
 const loadConfig = require("../handlers/config.js");
-const settings = loadConfig("./config.toml");
-const indexjs = require("../app.js");
-const adminjs = require("./admin.js");
-const fs = require("fs");
-const ejs = require("ejs");
-const fetch = require("node-fetch");
-const NodeCache = require("node-cache");
-const log = require("../handlers/log.js");
-const arciotext = require("../handlers/afk.js");
-const crypto = require('crypto')
+const settings = loadConfig("./config.yaml");
+const crypto = require("crypto");
 
-const myCache = new NodeCache({ deleteOnExpire: true, stdTTL: 59 });
+const defaultReferralSettings = {
+  creator_reward: 100,
+  referee_reward: 250,
+  link: "",
+  path: "ref",
+  max_codes: 5,
+  max_uses_per_code: 0,
+};
 
-/* Ensure platform release target is met */
-const heliactylModule = { "name": "UI10 Addon", "target_platform": "10.0.0" };
-/* Module */
-module.exports.heliactylModule = heliactylModule;
+function toNumber(value, fallback) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+const referralOverrides =
+  (settings.api && settings.api.client && settings.api.client.referrals) || {};
+
+const referralSettings = {
+  creator_reward:
+    referralOverrides.creator_reward !== undefined
+      ? toNumber(referralOverrides.creator_reward, defaultReferralSettings.creator_reward)
+      : defaultReferralSettings.creator_reward,
+  referee_reward:
+    referralOverrides.referee_reward !== undefined
+      ? toNumber(referralOverrides.referee_reward, defaultReferralSettings.referee_reward)
+      : defaultReferralSettings.referee_reward,
+  max_codes:
+    referralOverrides.max_codes !== undefined
+      ? toNumber(referralOverrides.max_codes, defaultReferralSettings.max_codes)
+      : defaultReferralSettings.max_codes,
+  max_uses_per_code:
+    referralOverrides.max_uses_per_code !== undefined
+      ? toNumber(referralOverrides.max_uses_per_code, defaultReferralSettings.max_uses_per_code)
+      : defaultReferralSettings.max_uses_per_code,
+  link: referralOverrides.link || defaultReferralSettings.link,
+  path: referralOverrides.path || defaultReferralSettings.path,
+};
+
+const oauth2Link =
+  (settings.api &&
+    settings.api.client &&
+    settings.api.client.oauth2 &&
+    settings.api.client.oauth2.link) ||
+  "";
+const websiteUrl = settings.website && settings.website.url ? settings.website.url : "";
+const referralBaseUrl = (
+  (referralSettings.link || websiteUrl || oauth2Link || "").replace(/\/$/, "")
+);
+const referralLandingPath = (referralSettings.path || "ref").replace(/^\/+|\/+$/g, "");
+
+function buildReferralLink(code) {
+  if (!code) return null;
+  if (referralBaseUrl.length === 0) {
+    return `/${referralLandingPath}/${code}`;
+  }
+  return `${referralBaseUrl}/${referralLandingPath}/${code}`;
+}
+
+async function syncCreatorReferralStats(creatorId, code, uses, db) {
+  const referrals = (await db.get(`referrals-${creatorId}`)) || [];
+  const existing = referrals.find((entry) => entry.code === code);
+  if (existing) {
+    existing.uses = uses;
+  } else {
+    referrals.push({
+      code,
+      uses,
+      created_at: Date.now(),
+    });
+  }
+  await db.set(`referrals-${creatorId}`, referrals);
+}
+
+async function processReferralClaim(code, claimerId, db) {
+  if (!code || !claimerId) {
+    return { error: "Invalid claim data" };
+  }
+  const referralKey = `referral-code-${code}`;
+  const referralData = await db.get(referralKey);
+  if (!referralData) return { error: "Invalid code" };
+  if (referralData.creator == claimerId)
+    return { error: "You cannot claim your own referral code" };
+  const alreadyClaimed = await db.get(`referral-claimed-${claimerId}`);
+  if (alreadyClaimed) return { error: "Already claimed a referral code" };
+
+  if (
+    referralSettings.max_uses_per_code > 0 &&
+    referralData.uses >= referralSettings.max_uses_per_code
+  ) {
+    return { error: "Referral code cannot be used anymore" };
+  }
+
+  const newUses = referralData.uses + 1;
+  await db.set(referralKey, {
+    ...referralData,
+    uses: newUses,
+    last_used: Date.now(),
+  });
+  await syncCreatorReferralStats(referralData.creator, code, newUses, db);
+  await db.set(`referral-claimed-${claimerId}`, code);
+
+  const creatorCoins = (await db.get(`coins-${referralData.creator}`)) || 0;
+  await db.set(
+    `coins-${referralData.creator}`,
+    creatorCoins + referralSettings.creator_reward
+  );
+
+  const claimerCoins = (await db.get(`coins-${claimerId}`)) || 0;
+  await db.set(
+    `coins-${claimerId}`,
+    claimerCoins + referralSettings.referee_reward
+  );
+
+  return { success: true, referral: referralData, uses: newUses };
+}
+
+const zypherousModule = { name: "UI10 Addon", target_platform: "10.0.0" };
+
+module.exports.ZypherousModule = zypherousModule;
+module.exports.buildReferralLink = buildReferralLink;
+module.exports.processReferralClaim = processReferralClaim;
+module.exports.referralSettings = referralSettings;
+
 module.exports.load = async function (app, db) {
-    // Create a referral code
-    app.post("/referral/create", async (req, res) => {
-        if (!req.session.pterodactyl) return res.redirect(`/login`);
+  app.get(`/${referralLandingPath}/:code`, async (req, res) => {
+    const code = req.params.code;
+    if (!code) return res.status(400).send("Missing referral code.");
+    const referralData = await db.get(`referral-code-${code}`);
+    if (referralData) {
+      req.session.pendingReferral = code;
+    }
+    res.render("ref", {
+      settings,
+      code,
+      referral: referralData,
+      referralLink: buildReferralLink(code),
+      referralRewards: {
+        creator: referralSettings.creator_reward,
+        referee: referralSettings.referee_reward,
+      },
+    });
+  });
 
-        const userId = req.session.userinfo.id;
-        const code = crypto.randomBytes(8).toString("hex");
-        let referrals = await db.get('referrals-' + req.session.userinfo.id) || [];
+  app.get("/referral/:code", async (req, res) => {
+    const code = req.params.code;
+    if (!code) return res.json({ error: "Missing referral code" });
+    const referralData = await db.get(`referral-code-${code}`);
+    if (!referralData) return res.json({ error: "Invalid code" });
+    res.json({
+      code,
+      uses: referralData.uses,
+      creator: referralData.creator,
+      created_at: referralData.created_at,
+      link: buildReferralLink(code),
+    });
+  });
 
-        await db.set(`referral-code-${code}`, { creator: userId, uses: 0 });
-        referrals.push({
-            code: code,
-            uses: 0
-        })
+  app.post("/referral/create", async (req, res) => {
+    if (!req.session.pterodactyl || !req.session.userinfo)
+      return res.redirect("/login");
+    const userId = req.session.userinfo.id;
+    const referrals = (await db.get(`referrals-${userId}`)) || [];
+    if (
+      referralSettings.max_codes > 0 &&
+      referrals.length >= referralSettings.max_codes
+    ) {
+      return res
+        .status(400)
+        .json({ error: "You reached the maximum number of referral codes." });
+    }
 
-        await db.set('referrals-' + req.session.userinfo.id, referrals);
-        res.json({ code: code });
+    let code;
+    while (true) {
+      code = crypto.randomBytes(5).toString("hex");
+      const existing = await db.get(`referral-code-${code}`);
+      if (!existing) break;
+    }
+
+    const createdAt = Date.now();
+    referrals.push({
+      code,
+      uses: 0,
+      created_at: createdAt,
+    });
+    await db.set(`referrals-${userId}`, referrals);
+    await db.set(`referral-code-${code}`, {
+      creator: userId,
+      uses: 0,
+      created_at: createdAt,
     });
 
-    // Claim a referral code
-    app.post("/referral/claim", async (req, res) => {
-        if (!req.session.pterodactyl) return res.redirect(`/login`);
-        if (!req.body.code) return res.json({ error: "No code provided" });
-
-        const referralData = await db.get(`referral-code-${req.body.code}`);
-        if (!referralData) return res.json({ error: "Invalid code" });
-
-        const userId = req.session.userinfo.id;
-
-        if (referralData.creator == userId) return res.json({ error: "You can't claim your own referral code" });
-
-        const alreadyClaimed = await db.get(`referral-claimed-${userId}`);
-        if (alreadyClaimed) return res.json({ error: "Already claimed a referral code" });
-
-        await db.set(`referral-claimed-${userId}`, req.body.code);
-        await db.set(`referral-code-${req.body.code}`, { ...referralData, uses: referralData.uses + 1 });
-
-        const creatorCoins = await db.get(`coins-${referralData.creator}`) || 0;
-        await db.set(`coins-${referralData.creator}`, creatorCoins + 100);
-
-        const claimerCoins = await db.get(`coins-${userId}`) || 0;
-        await db.set(`coins-${userId}`, claimerCoins + 250);
-
-        res.json({ success: true });
+    res.json({
+      code,
+      link: buildReferralLink(code),
     });
+  });
 
-    // List user's referral codes
-    app.get("/referral/list", async (req, res) => {
-        if (!req.session.pterodactyl) return res.redirect(`/login`);
+  app.post("/referral/claim", async (req, res) => {
+    if (!req.session.pterodactyl || !req.session.userinfo)
+      return res.redirect("/login");
+    const code = req.body.code;
+    const result = await processReferralClaim(code, req.session.userinfo.id, db);
+    if (result.success) {
+      return res.json({ success: true });
+    }
+    return res.json({ error: result.error });
+  });
 
-        const userId = req.session.userinfo.id;
-        const referrals = await db.get('referrals-' + userId);
-
-        res.json({ referrals });
-    });
-
-    // Get details of a specific referral code
-    app.get("/referral/:code", async (req, res) => {
-        if (!req.session.pterodactyl) return res.redirect(`/login`);
-
-        const referralData = await db.get(`referral-code-${req.params.code}`);
-        if (!referralData) return res.json({ error: "Invalid code" });
-
-        res.json({ code: req.params.code, uses: referralData.uses, creator: referralData.creator });
-    });
+  app.get("/referral/list", async (req, res) => {
+    if (!req.session.pterodactyl || !req.session.userinfo)
+      return res.redirect("/login");
+    const userId = req.session.userinfo.id;
+    const referrals = (await db.get(`referrals-${userId}`)) || [];
+    const list = [];
+    for (const entry of referrals) {
+      const code = entry.code;
+      const codeData = await db.get(`referral-code-${code}`);
+      if (!codeData) continue;
+      list.push({
+        code,
+        uses: codeData.uses ?? entry.uses ?? 0,
+        created_at: codeData.created_at ?? entry.created_at ?? Date.now(),
+        link: buildReferralLink(code),
+      });
+    }
+    list.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+    res.json({ referrals: list });
+  });
 };
