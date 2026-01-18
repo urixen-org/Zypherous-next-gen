@@ -2,41 +2,59 @@
      x-show="open" 
      @keydown.escape.window="open = false"
      @toggle-modal.window="open = !open"
-     class="fixed inset-0 z-50 justify-center items-center"
+     class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
      style="display: none;" id="createServerModal">
+  <% const clientSettings = (settings && settings.api && settings.api.client) ? settings.api.client : {}; %>
+  <% const locations = clientSettings.locations || {}; %>
+  <% const eggs = clientSettings.eggs || {}; %>
 
-  <div class="bg-neutral-900 border border-neutral-800 p-8 mt-12 rounded-sm max-w-2xl mx-auto">
-    <div class="text-white mb-4">
-      <h2 class="font-semibold text-xl">Create a new server</h2>
+  <div class="absolute inset-0 bg-neutral-950/70 backdrop-blur-sm" @click="open = false"></div>
+  <div class="relative w-full max-w-3xl rounded-md border border-neutral-800 bg-neutral-900/95 shadow-2xl ring-1 ring-black/40 modal-content">
+    <div class="flex items-center justify-between border-b border-neutral-800/70 px-6 py-5">
+      <div class="text-white">
+        <h2 class="text-xl font-semibold tracking-tight">Create a new server</h2>
+        <p class="text-sm text-slate-400 mt-1">Pick resources, location, and software. Limits apply to your plan.</p>
+      </div>
+      <button type="button" onclick="toggleModal()" class="rounded-full border border-neutral-800 bg-white/5 px-3 py-2 text-xs font-medium text-slate-200 hover:bg-white/10">
+        Close
+      </button>
     </div>
     <form>
-        <label class="block mb-2 text-white font-medium text-sm">
-          Server Name:
-          <span class="cursor-pointer inline-flex items-center">            
-          </span>
-        </label>
-      <input type="text" id="InputName" class="w-full border border-neutral-800 bg-neutral-950 focus:ring-sky-500 focus:border-transparent font-medium pl-4 py-3 text-sm text-slate-300 placeholder:text-slate-500 tracking-tight rounded-sm mb-4" placeholder="Server name" x-model="aiName">
+      <div class="px-6 py-6 space-y-6">
+        <div>
+          <label class="block mb-2 text-sm font-medium text-white">Server name</label>
+          <input type="text" id="InputName" class="w-full border border-neutral-800 bg-neutral-950 focus:ring-sky-500 focus:border-transparent font-medium pl-4 py-3 text-sm text-slate-300 placeholder:text-slate-500 tracking-tight rounded-sm" placeholder="e.g. Survival SMP" x-model="aiName">
+          <p class="text-xs text-slate-500 mt-2">This is visible to you and anyone you share the server with.</p>
+        </div>
 
-      <div class="flex space-x-4 mb-4">
         <div>
-          <label class="block mb-2 text-white font-medium text-sm">Memory (GB):</label>
-          <input type="number" id="InputRAM" class="w-full border border-neutral-800 bg-neutral-950 focus:ring-sky-500 focus:border-transparent font-medium pl-4 py-3 text-sm text-slate-300 placeholder:text-slate-500 tracking-tight rounded-sm mb-4" placeholder="2">
+          <div class="flex items-center justify-between mb-2">
+            <label class="text-sm font-medium text-white">Resources</label>
+            <span class="text-xs text-slate-500">Numbers only</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label class="block mb-2 text-xs font-medium text-slate-400">Memory (GB)</label>
+              <input type="number" id="InputRAM" class="w-full border border-neutral-800 bg-neutral-950 focus:ring-sky-500 focus:border-transparent font-medium pl-4 py-3 text-sm text-slate-300 placeholder:text-slate-500 tracking-tight rounded-sm" placeholder="2">
+            </div>
+            <div>
+              <label class="block mb-2 text-xs font-medium text-slate-400">Storage (GB)</label>
+              <input type="number" id="InputDisk" class="w-full border border-neutral-800 bg-neutral-950 focus:ring-sky-500 focus:border-transparent font-medium pl-4 py-3 text-sm text-slate-300 placeholder:text-slate-500 tracking-tight rounded-sm" placeholder="10">
+            </div>
+            <div>
+              <label class="block mb-2 text-xs font-medium text-slate-400">CPU Cores</label>
+              <input type="number" id="InputCPU" class="w-full border border-neutral-800 bg-neutral-950 focus:ring-sky-500 focus:border-transparent font-medium pl-4 py-3 text-sm text-slate-300 placeholder:text-slate-500 tracking-tight rounded-sm" placeholder="1">
+            </div>
+          </div>
         </div>
-        <div>
-          <label class="block mb-2 text-white font-medium text-sm">Storage (GB):</label>
-          <input type="number" id="InputDisk" class="w-full border border-neutral-800 bg-neutral-950 focus:ring-sky-500 focus:border-transparent font-medium pl-4 py-3 text-sm text-slate-300 placeholder:text-slate-500 tracking-tight rounded-sm mb-4" placeholder="10">
-        </div>
-        <div>
-          <label class="block mb-2 text-white font-medium text-sm">CPU Cores:</label>
-          <input type="number" id="InputCPU" class="w-full border border-neutral-800 bg-neutral-950 focus:ring-sky-500 focus:border-transparent font-medium pl-4 py-3 text-sm text-slate-300 placeholder:text-slate-500 tracking-tight rounded-sm mb-4" placeholder="1">
-        </div>
-      </div>      
 
-      <label class="block mb-2 text-white font-medium text-sm">Location:</label>
-      <div class="grid grid-cols-2 gap-4 mb-4">
-        <% for (let [name, value] of Object.entries(settings.api.client.locations)) { %>
+        <div>
+          <label class="block mb-2 text-sm font-medium text-white">Location</label>
+          <p class="text-xs text-slate-500 mb-3">Choose the region closest to your players.</p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <% for (let [name, value] of Object.entries(locations)) { %>
           <% if (value.show) { %>
-            <div class="card location-card border border-neutral-800 bg-neutral-950 hover:bg-neutral-900 text-white pl-4 py-2.5 rounded-sm font-medium cursor-pointer"
+            <div class="card location-card border border-neutral-800 bg-neutral-950/70 hover:bg-neutral-900/80 hover:border-sky-500/40 text-white pl-4 py-2.5 rounded-sm font-medium cursor-pointer transition"
                  data-name="<%= name %>" 
                  onclick="selectLocation('<%= name %>')">
               <img class="inline-flex w-5 h-6 mr-2 rounded-sm" style="margin-bottom: 3.25px;" src="https://flagsapi.com/<%= value.iso %>/flat/64.png" alt="Flag">
@@ -45,11 +63,14 @@
           <% } %>
         <% } %>
         <input type="hidden" id="InputLoc">
-      </div>
+          </div>
+        </div>
       
-      <label class="block mb-2 text-white font-medium text-sm">Software:</label>
-      <select class="w-full border border-neutral-800 bg-neutral-950 focus:ring-sky-500 focus:border-transparent font-medium pl-4 py-3 text-sm text-slate-300 placeholder:text-slate-500 tracking-tight rounded-sm mb-4" id="InputEgg">
-        <% for (let [name, value] of Object.entries(settings.api.client.eggs)) { %>
+        <div>
+          <label class="block mb-2 text-sm font-medium text-white">Software</label>
+          <select class="w-full border border-neutral-800 bg-neutral-950 focus:ring-sky-500 focus:border-transparent font-medium pl-4 py-3 text-sm text-slate-300 placeholder:text-slate-500 tracking-tight rounded-sm" id="InputEgg">
+        <% for (let [name, value] of Object.entries(eggs)) { %>
+          <% if (value.enabled === true) { %>
           <% if (!(value.adminOnly && (!pterodactyl || !pterodactyl.root_admin))) { %>
             <% if (value.pro) { %>
             <% if (packagename !== 'pro') { %>
@@ -61,23 +82,31 @@
             <option class="" value="<%= name %>"><%= value.display %></option>
            <% } %>
           <% } %>
+          <% } %>
         <% } %>
-      </select>      
+          </select>
+        </div>
+      </div>
 
-      <div x-data="{ open: false }">
-        <button @mouseenter="open = true" @mouseleave="open = false" type="button" onclick="submitNew()" class="bg-sky-500 text-white font-semibold py-2 px-4 rounded-sm mt-4 border border-neutral-800">
-          Create Server
-        </button>
-
-        <button type="button" onclick="toggleModal()" class="bg-transparent text-slate-400 hover:text-slate-200 font-medium py-2 px-4 rounded-sm mt-4">
-          Close
-        </button>
-        
-        <div x-show="open"
-          class="absolute rounded-sm bg-neutral-950 border border-neutral-800 px-4 py-2.5 text-sm text-white font-medium tracking-tight mt-3"
-          style="display: none;">
-         By clicking this, you are agreeing to the <%= settings.name %> User Agreement and Minecraft EULA.
-       </div>
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-neutral-800/70 px-6 py-5">
+        <div x-data="{ open: false }" class="relative">
+          <button @mouseenter="open = true" @mouseleave="open = false" type="button" class="inline-flex items-center rounded-full border border-neutral-800 bg-white/5 px-3 py-2 text-xs font-medium text-slate-300 hover:bg-white/10">
+            Terms
+          </button>
+          <div x-show="open"
+            class="absolute left-0 top-full mt-2 rounded-sm bg-neutral-950 border border-neutral-800 px-4 py-2.5 text-xs text-white font-medium tracking-tight"
+            style="display: none;">
+            By clicking Create, you agree to the <%= settings.name %> User Agreement and Minecraft EULA.
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <button type="button" onclick="toggleModal()" class="bg-transparent text-slate-400 hover:text-slate-200 font-medium py-2 px-4 rounded-sm">
+            Cancel
+          </button>
+          <button type="button" onclick="submitNew()" class="bg-sky-500 text-white font-semibold py-2.5 px-5 rounded-sm border border-neutral-800 hover:bg-sky-400 transition-colors">
+            Create Server
+          </button>
+        </div>
       </div>
     </form>
   </div>
@@ -96,14 +125,9 @@
   }
 }
 
-/* Ensuring the whole modal is always visible and centered */
-#createServerModal {
-  display: flex;
-  align-items: center; /* This centers the modal vertically */
-  justify-content: center; /* This centers the modal horizontally */
-}
-
 .card-selected {
-  border: 1px solid #38bdf8; /* Highlight for selected cards */
+  border-color: #38bdf8;
+  background-color: #0b1220;
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.45);
 }
 </style>

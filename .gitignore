@@ -5,3 +5,6 @@ xyara.db
 .vscode/
 package-lock.json
 logs/
+logs
+xyara.db
+db.xyr

@@ -5,11 +5,15 @@ homepage_logo: /assets/logo.webp
 timezone: Europe/London
 version: 11.4.3
 testing: false
+debug:
+  oauth2: false
+  pterodactyl: false
 clusters: 1
 database: sqlite://Zypherous.db
 pterodactyl:
   domain: https://panel.example.com
-  key: ptla_.................
+  application_key: ptla_.................
+  client_key: ptlc_.................
 website:
   port: 3001
   secret: secret
@@ -30,14 +34,14 @@ api:
       ads:
         - name: Example server 1
           invite: https://discord.gg/example
-          id: '000000000000000000'
+          id: "000000000000000000"
           coins: 200
         - name: Example server 2
           invite: https://discord.gg/example
-          id: '000000000000000000'
+          id: "000000000000000000"
           coins: 200
     bot:
-      token: ''
+      token: ""
       joinguild:
         _comment: >-
           The Discord bot must be in these servers and have invite permissions.
@@ -46,7 +50,7 @@ api:
           package so that only this works.
         enabled: true
         guildid:
-          - ''
+          - ""
       giverole:
         _comment: >-
           Auto-join must be enabled for this to work - or the user must already
@@ -70,7 +74,7 @@ api:
       _comment: Configure referral link limits, rewards, and the landing path.
       creator_reward: 100
       referee_reward: 250
-      link: ''
+      link: ""
       path: ref
       max_codes: 5
       max_uses_per_code: 0
@@ -123,10 +127,10 @@ api:
           This allows you to set a different plan/package to people who have a
           specific role however this requires the Discord bot to be configured
           and functioning. This is mainly used for Boost rewards.
-        roleServer: ''
+        roleServer: ""
         roles: {}
     locations:
-      '2':
+      "2":
         name: United Kingdom
         iso: GB
         pro: false
@@ -217,7 +221,7 @@ api:
             SERVERNAME: Server
             GAMEMODE: survival
             DIFFICULTY: easy
-            CHEATS: 'false'
+            CHEATS: "false"
           feature_limits:
             databases: 4
             backups: 4
@@ -299,7 +303,7 @@ resources:
 linkvertise:
   enabled: true
   coins: 150
-  userid: '000000'
+  userid: "000000"
 antivpn:
   note: >-
     For this to work, generate an API Key on https://proxycheck.io/. If you do
@@ -320,7 +324,7 @@ logging:
     This is the 2nd-generation version of Zypherous's logging system. Please
     report any bugs on the GitHub (github.com/Zypherous/Zypherous). Thank you.
   status: true
-  webhook: ''
+  webhook: ""
   timeout_ms: 5000
   local:
     enabled: true
@@ -334,13 +338,13 @@ logging:
       modify server: true
       buy servers: true
       buy ram: true
-      buy cpu: true
+      buy cpu: truetrue
       buy disk: true
     admin:
       set coins: true
       add coins: true
       set resources: true
-      set plan: true
+      set plan: truetrue
       create coupon: true
       revoke coupon: true
       remove account: true

@@ -162,6 +162,9 @@ module.exports.load = async function (app, db) {
           if (!settings.api.client.eggs[egg]) {
             return res.redirect(`${redirectlink}?err=INVALIDEGG`);
           }
+          if (egginfo.enabled !== true) {
+            return res.redirect(`${redirectlink}?err=INVALIDEGG`);
+          }
           if (egginfo.adminOnly && !req.session.pterodactyl.root_admin) {
             return res.redirect(`${redirectlink}?err=INVALIDEGG`);
           }
@@ -257,7 +260,7 @@ module.exports.load = async function (app, db) {
                 method: "post",
                 headers: {
                   "Content-Type": "application/json",
-                  Authorization: `Bearer ${settings.pterodactyl.key}`,
+                  Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
                   Accept: "application/json",
                 },
                 body: JSON.stringify(await specs),
@@ -464,7 +467,7 @@ module.exports.load = async function (app, db) {
             method: "patch",
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${settings.pterodactyl.key}`,
+              Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
               Accept: "application/json",
             },
             body: JSON.stringify({
@@ -529,7 +532,7 @@ module.exports.load = async function (app, db) {
           method: "delete",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${settings.pterodactyl.key}`,
+            Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
           },
         }
       );

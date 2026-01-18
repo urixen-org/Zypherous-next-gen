@@ -19,19 +19,27 @@
             </div>
 
             <div class="grid gap-4 lg:grid-cols-2">
+              <% const nodeLocations = locations || {}; %>
               <% (nodes || []).forEach((node) => { %>
+                <% const location = nodeLocations[String(node.attributes?.location_id)] || {}; %>
                 <div class="bg-neutral-900/60 rounded-sm border border-neutral-800 p-5 shadow-sm">
                   <div class="flex items-center justify-between">
                     <div>
-                      <h3 class="text-sm font-semibold text-white"><%= node.attributes?.name || 'Unnamed Node' %></h3>
+                      <p class="text-[0.65rem] uppercase tracking-[0.35em] text-slate-500">Node</p>
+                      <h3 class="text-sm font-semibold text-white mt-1"><%= node.attributes?.name || 'Unnamed Node' %></h3>
                       <p class="text-xs text-slate-500">ID: <%= node.attributes?.id ?? '-' %></p>
                     </div>
-                    <span class="text-xs text-slate-400"><%= node.attributes?.fqdn ?? 'No FQDN' %></span>
+                    <div class="flex items-center gap-2 text-xs text-slate-400">
+                      <% if (location.iso) { %>
+                        <img class="w-4 h-4 rounded-[2px]" src="https://flagsapi.com/<%= location.iso %>/flat/64.png" alt="<%= location.name || 'Country' %>">
+                      <% } %>
+                      <span><%= location.name || node.attributes?.fqdn || 'No FQDN' %></span>
+                    </div>
                   </div>
                   <div class="mt-4 grid gap-3 text-xs text-slate-400">
                     <div class="flex items-center justify-between">
                       <span>Location:</span>
-                      <span class="text-white"><%= node.attributes?.location_id ?? '-' %></span>
+                      <span class="text-white"><%= location.name || node.attributes?.location_id ?? '-' %></span>
                     </div>
                     <div class="flex items-center justify-between">
                       <span>Memory (MB):</span>

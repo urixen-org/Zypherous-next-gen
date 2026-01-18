@@ -111,7 +111,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -171,7 +171,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -246,7 +246,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -390,7 +390,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -499,7 +499,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -559,7 +559,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -656,7 +656,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -708,7 +708,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -791,7 +791,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -835,7 +835,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -891,7 +891,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -940,7 +940,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -974,7 +974,7 @@ module.exports.load = async function (app, db) {
           method: "get",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${settings.pterodactyl.key}`,
+            Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
           },
         }
       );
@@ -993,7 +993,7 @@ module.exports.load = async function (app, db) {
           method: "get",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${settings.pterodactyl.key}`,
+            Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
           },
         }
       );
@@ -1012,7 +1012,7 @@ module.exports.load = async function (app, db) {
           method: "get",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${settings.pterodactyl.key}`,
+            Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
           },
         }
       );
@@ -1034,7 +1034,7 @@ module.exports.load = async function (app, db) {
           method: "get",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${settings.pterodactyl.key}`,
+            Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
           },
         }
       );
@@ -1100,7 +1100,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -1111,6 +1111,15 @@ module.exports.load = async function (app, db) {
     req.session.pterodactyl = cacheaccountinfo.attributes;
     if (cacheaccountinfo.attributes.root_admin !== true)
       return four0four(req, res, theme);
+
+    const eggCount = Object.keys(settings.api?.client?.eggs || {}).length;
+    if (eggCount === 0) {
+      try {
+        await settingsStore.syncEggsFromPanel(db, { force: true });
+      } catch (error) {
+        console.error("Egg sync failed during /admin/eggs load:", error);
+      }
+    }
 
     let coins = 0;
     if (settings.api.client.coins.enabled && req.session.userinfo) {
@@ -1175,7 +1184,7 @@ module.exports.load = async function (app, db) {
       },
       secrets: {
         websiteSecret: maskSecret(settings.website.secret),
-        panelKey: maskSecret(settings.pterodactyl.key),
+        panelKey: maskSecret(settings.pterodactyl.application_key || settings.pterodactyl.key),
         oauthSecret: maskSecret(settings.api.client.oauth2.secret),
         apiCode: maskSecret(settings.api.client.api.code),
         botToken: maskSecret(settings.api.client.bot.token),
@@ -1256,6 +1265,9 @@ module.exports.load = async function (app, db) {
     if (typeof payload.adminOnly !== "undefined") {
       egg.adminOnly = payload.adminOnly === true;
     }
+    if (typeof payload.enabled !== "undefined") {
+      egg.enabled = payload.enabled === true;
+    }
 
     if (!egg.minimum) egg.minimum = { ram: 0, disk: 0, cpu: 0 };
     if (!egg.maximum) egg.maximum = { ram: 0, disk: 0, cpu: 0 };
@@ -1314,7 +1326,7 @@ module.exports.load = async function (app, db) {
     if (!req.session.pterodactyl || req.session.pterodactyl.root_admin !== true)
       return res.status(403).json({ ok: false, error: "unauthorized" });
 
-    const { name, ram, disk, cpu, servers } = req.body || {};
+    const { name, ram, disk, cpu, servers, cost } = req.body || {};
     if (!name || typeof name !== "string") {
       return res.status(400).json({ ok: false, error: "invalid" });
     }
@@ -1326,6 +1338,7 @@ module.exports.load = async function (app, db) {
       disk: parseFloat(disk) || 0,
       cpu: parseFloat(cpu) || 0,
       servers: parseFloat(servers) || 0,
+      cost: parseFloat(cost) || 0,
     };
 
     await settingsStore.save(db, settings);
@@ -1384,7 +1397,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -1442,7 +1455,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -1500,7 +1513,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -1525,7 +1538,7 @@ module.exports.load = async function (app, db) {
           method: "get",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${settings.pterodactyl.key}`,
+            Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
           },
         }
       );
@@ -1548,7 +1561,8 @@ module.exports.load = async function (app, db) {
         userinfo: req.session.userinfo,
         packagename: req.session.userinfo ? await db.get("package-" + req.session.userinfo.id) || settings.api.client.packages.default : null,
         packages: req.session.userinfo ? settings.api.client.packages.list[await db.get("package-" + req.session.userinfo.id) || settings.api.client.packages.default] : null,
-        nodes: nodes
+        nodes: nodes,
+        locations: settings.api.client.locations || {}
       },
       null,
       function (err, str) {
@@ -1577,7 +1591,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -1664,7 +1678,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -1724,7 +1738,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -1788,7 +1802,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -1848,7 +1862,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -1907,7 +1921,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -1966,7 +1980,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -1996,7 +2010,7 @@ module.exports.load = async function (app, db) {
         method: "post",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
           Accept: "application/json",
         },
         body: JSON.stringify({
@@ -2077,7 +2091,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -2101,7 +2115,7 @@ module.exports.load = async function (app, db) {
           method: "get",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${settings.pterodactyl.key}`,
+            Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
           },
         }
       );
@@ -2135,7 +2149,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -2158,7 +2172,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -2243,7 +2257,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -2261,7 +2275,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -2292,7 +2306,7 @@ module.exports.load = async function (app, db) {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
         body: JSON.stringify(payload),
       }
@@ -2325,7 +2339,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -2382,7 +2396,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -2452,7 +2466,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -2520,7 +2534,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -2572,7 +2586,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -2590,7 +2604,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -2609,7 +2623,7 @@ module.exports.load = async function (app, db) {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
         body: JSON.stringify({
           email: current.email,
@@ -2650,7 +2664,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -2668,7 +2682,7 @@ module.exports.load = async function (app, db) {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -2720,7 +2734,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -2754,7 +2768,7 @@ module.exports.load = async function (app, db) {
           method: "get",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${settings.pterodactyl.key}`,
+            Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
           },
         }
       );
@@ -2839,7 +2853,7 @@ module.exports.load = async function (app, db) {
           method: "get",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${settings.pterodactyl.key}`,
+            Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
           },
         }
       );
@@ -2870,7 +2884,7 @@ module.exports.load = async function (app, db) {
           method: "get",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${settings.pterodactyl.key}`,
+            Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
           },
         }
       );
@@ -2937,7 +2951,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -2997,7 +3011,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -3027,7 +3041,7 @@ module.exports.load = async function (app, db) {
     }
 
     const eggInfo = settings.api.client.eggs[eggKey];
-    if (!eggInfo || !eggInfo.info) {
+    if (!eggInfo || !eggInfo.info || eggInfo.enabled !== true) {
       return res.redirect("/admin/server/create?err=INVALIDEGG");
     }
 
@@ -3064,7 +3078,7 @@ module.exports.load = async function (app, db) {
         method: "post",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
           Accept: "application/json",
         },
         body: JSON.stringify(specs),
@@ -3102,7 +3116,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -3126,7 +3140,7 @@ module.exports.load = async function (app, db) {
           method: "get",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${settings.pterodactyl.key}`,
+            Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
           },
         }
       );
@@ -3160,7 +3174,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -3183,7 +3197,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -3241,7 +3255,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -3259,7 +3273,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -3290,7 +3304,7 @@ module.exports.load = async function (app, db) {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
         body: JSON.stringify({
           name: name,
@@ -3310,7 +3324,7 @@ module.exports.load = async function (app, db) {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
         body: JSON.stringify({
           allocation: allocationId,
@@ -3354,7 +3368,7 @@ module.exports.load = async function (app, db) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -3389,7 +3403,7 @@ module.exports.load = async function (app, db) {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${settings.pterodactyl.key}`,
+            Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
           },
         }
       );
@@ -3428,7 +3442,7 @@ module.exports.load = async function (app, db) {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${settings.pterodactyl.key}`,
+            Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
           },
         }
       );
@@ -3467,7 +3481,7 @@ module.exports.load = async function (app, db) {
           method: "DELETE",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${settings.pterodactyl.key}`,
+            Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
           },
         }
       );
@@ -3532,7 +3546,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );
@@ -3613,7 +3627,7 @@ module.exports.load = async function (app, db) {
             method: "post",
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${settings.pterodactyl.key}`,
+              Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
             },
           }
         );
@@ -3636,7 +3650,7 @@ module.exports.load = async function (app, db) {
             method: "post",
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${settings.pterodactyl.key}`,
+              Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
             },
           }
         );

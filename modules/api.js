@@ -122,7 +122,7 @@ module.exports.load = async function (app, db) {
         method: "get",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
       }
     );

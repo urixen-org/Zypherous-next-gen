@@ -46,6 +46,11 @@ module.exports.load = async function (app, db) {
     }
   }
 
+  const normalizeCost = (value) => {
+    const parsed = parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+
   // Helper function to check resource limits
   async function checkResourceLimits(userId, type, amount, db) {
     const currentExtra = (await db.get(`extra-${userId}`)) || {
@@ -66,6 +71,54 @@ module.exports.load = async function (app, db) {
   }
 
   // Package purchase endpoint
+  app.get("/buy-plan", async (req, res) => {
+    if (!req.session.pterodactyl) return res.redirect("/login");
+
+    let settings = await enabledCheck(req, res);
+    if (!settings) return;
+
+    const planKey = (req.query.plan || "").trim();
+    if (!planKey) return res.send("Missing plan");
+
+    const plan = settings.api?.client?.packages?.list?.[planKey];
+    if (!plan) return res.send("Invalid plan");
+
+    const cost = normalizeCost(plan.cost);
+    if (cost === null || cost < 0) return res.send("Plan not for sale");
+
+    const userId = req.session.userinfo.id;
+    const currentPlan =
+      (await db.get(`package-${userId}`)) ||
+      settings.api?.client?.packages?.default ||
+      null;
+    if (currentPlan === planKey) {
+      return res.redirect("/store?err=ALREADYONPLAN");
+    }
+
+    const userCoins = (await db.get(`coins-${userId}`)) || 0;
+    if (userCoins < cost) {
+      return res.redirect("/store?err=CANNOTAFFORD");
+    }
+
+    const newUserCoins = userCoins - cost;
+    if (newUserCoins === 0) {
+      await db.delete(`coins-${userId}`);
+    } else {
+      await db.set(`coins-${userId}`, newUserCoins);
+    }
+
+    await db.set(`package-${userId}`, planKey);
+    adminjs.suspend(userId);
+
+    log(
+      `Plan Purchased`,
+      `${req.session.userinfo.username}#${req.session.userinfo.discriminator} bought the ${planKey} plan for \`${cost}\` coins.`,
+      { scope: "user", actorId: req.session.userinfo?.id, targetId: userId, severity: "info", tags: ["store", "plan"] }
+    );
+
+    res.redirect("/store?success=PLAN_MODIFIED");
+  });
+
   app.get("/buy-package", async (req, res) => {
     if (!req.session.pterodactyl) return res.redirect("/login");
 

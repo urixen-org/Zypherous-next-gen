@@ -56,7 +56,7 @@ module.exports.load = async function (app, db) {
               method: 'get',
                     headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${settings.pterodactyl.key}`
+                'Authorization': `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`
               }
             }
           );
@@ -158,7 +158,7 @@ module.exports.load = async function (app, db) {
               method: 'get',
               headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${settings.pterodactyl.key}`
+                'Authorization': `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`
               }
             }
           );
@@ -223,7 +223,7 @@ module.exports.load = async function (app, db) {
           method: 'get',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${settings.pterodactyl.key}`
+            'Authorization': `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`
           }
         }
       );
@@ -298,7 +298,7 @@ async function createPterodactylUser(email, username, displayName) {
       const testResponse = await fetch(`${settings.pterodactyl.domain}/api/application/users`, {
         method: 'head',
         headers: {
-          'Authorization': `Bearer ${settings.pterodactyl.key}`
+          'Authorization': `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`
         }
       });
       
@@ -316,7 +316,7 @@ async function createPterodactylUser(email, username, displayName) {
         method: 'post',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${settings.pterodactyl.key}`
+          'Authorization': `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`
         },
         body: JSON.stringify({
           email: email,

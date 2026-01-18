@@ -17,6 +17,15 @@ const fs = require("fs");
 const { renderFile } = require("ejs");
 const vpnCheck = require("../handlers/vpnCheck.js");
 
+function debugLog(area, message, extra) {
+  if (!settings.debug || settings.debug[area] !== true) return;
+  if (extra) {
+    console.debug(`[debug:${area}] ${message}`, extra);
+    return;
+  }
+  console.debug(`[debug:${area}] ${message}`);
+}
+
 if (settings.api.client.oauth2.link.slice(-1) == "/")
     settings.api.client.oauth2.link = settings.api.client.oauth2.link.slice(
       0,
@@ -130,11 +139,12 @@ module.exports.load = async function (app, db) {
           ),
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
       });
+      const tokenText = await json.text();
       if (json.ok == true) {
-        let codeinfo = JSON.parse(await json.text());
+        let codeinfo = JSON.parse(tokenText);
         let scopes = codeinfo.scope;
         let missingscopes = [];
-  
+
         if (scopes.replace(/identify/g, "") == scopes)
           missingscopes.push("identify");
         if (scopes.replace(/email/g, "") == scopes) missingscopes.push("email");
@@ -152,7 +162,17 @@ module.exports.load = async function (app, db) {
             Authorization: `Bearer ${codeinfo.access_token}`,
           },
         });
-        let userinfo = JSON.parse(await userjson.text());
+        const userText = await userjson.text();
+        if (!userjson.ok) {
+          debugLog("oauth2", "Discord user fetch failed.", {
+            status: userjson.status,
+            body: userText,
+          });
+          return res.send(
+            "An error has occured while attempting to get your user information."
+          );
+        }
+        let userinfo = JSON.parse(userText);
   
         if (settings.whitelist.status) {
           if (!settings.whitelist.users.includes(userinfo.id))
@@ -365,7 +385,7 @@ module.exports.load = async function (app, db) {
                   method: "post",
                   headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${settings.pterodactyl.key}`,
+                    Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
                   },
                   body: JSON.stringify({
                     username: userinfo.id,
@@ -395,7 +415,7 @@ module.exports.load = async function (app, db) {
                     method: "get",
                     headers: {
                       "Content-Type": "application/json",
-                      Authorization: `Bearer ${settings.pterodactyl.key}`,
+                      Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
                     },
                   }
                 );
@@ -443,15 +463,84 @@ module.exports.load = async function (app, db) {
               method: "get",
               headers: {
                 "Content-Type": "application/json",
-                Authorization: `Bearer ${settings.pterodactyl.key}`,
+                Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
               },
             }
           );
-          if ((await cacheaccount.statusText) == "Not Found")
+          if (cacheaccount.status === 404) {
+            // Recover from stale user mapping by re-linking via email.
+            const accountlistjson = await fetch(
+              settings.pterodactyl.domain +
+                "/api/application/users?filter[email]=" +
+                encodeURIComponent(userinfo.email),
+              {
+                method: "get",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
+                },
+              }
+            );
+            if (accountlistjson.ok) {
+              const accountlist = await accountlistjson.json();
+              const user = accountlist.data.filter(
+                (acc) => acc.attributes.email == userinfo.email
+              );
+              if (user.length == 1) {
+                const userid = user[0].attributes.id;
+                const userids = (await db.get("users")) ?? [];
+                if (!userids.includes(userid)) {
+                  userids.push(userid);
+                  await db.set("users", userids);
+                }
+                await db.set("users-" + userinfo.id, userid);
+                cacheaccount = await fetch(
+                  settings.pterodactyl.domain +
+                    "/api/application/users/" +
+                    userid +
+                    "?include=servers",
+                  {
+                    method: "get",
+                    headers: {
+                      "Content-Type": "application/json",
+                      Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
+                    },
+                  }
+                );
+              } else {
+                return res.send(
+                  "An error has occured while attempting to get your user information."
+                );
+              }
+            } else {
+              return res.send(
+                "An error has occured while attempting to get your user information."
+              );
+            }
+          }
+          if (!cacheaccount.ok) {
+            const cacheText = await cacheaccount.text();
+            debugLog("pterodactyl", "User lookup failed.", {
+              status: cacheaccount.status,
+              body: cacheText,
+            });
             return res.send(
               "An error has occured while attempting to get your user information."
             );
-          let cacheaccountinfo = JSON.parse(await cacheaccount.text());
+          }
+          const cacheText = await cacheaccount.text();
+          const cacheContentType = cacheaccount.headers.get("content-type") || "";
+          if (!cacheContentType.includes("application/json")) {
+            debugLog("pterodactyl", "Non-JSON response from Pterodactyl.", {
+              status: cacheaccount.status,
+              contentType: cacheContentType,
+              body: cacheText,
+            });
+            return res.send(
+              "An error has occured while attempting to get your user information."
+            );
+          }
+          let cacheaccountinfo = JSON.parse(cacheText);
           req.session.pterodactyl = cacheaccountinfo.attributes;
 
           const pendingReferral = req.session.pendingReferral;
@@ -487,6 +576,10 @@ module.exports.load = async function (app, db) {
           "Not verified a Discord account. Please verify the email on your Discord account."
         );
       } else {
+        debugLog("oauth2", "Token exchange failed.", {
+          status: json.status,
+          body: tokenText,
+        });
         res.redirect(`/login`);
       }
     });

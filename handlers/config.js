@@ -28,6 +28,29 @@ function loadConfig(filePath) {
     throw new Error(`Unsupported config format: ${ext}`);
     }
 
+    if (config && config.pterodactyl) {
+      if (!config.pterodactyl.application_key && config.pterodactyl.key) {
+        config.pterodactyl.application_key = config.pterodactyl.key;
+      }
+      if (!config.pterodactyl.client_key && config.pterodactyl.client) {
+        config.pterodactyl.client_key = config.pterodactyl.client;
+      }
+      if (!config.pterodactyl.key && config.pterodactyl.application_key) {
+        config.pterodactyl.key = config.pterodactyl.application_key;
+      }
+    }
+
+    if (global.__settings && typeof global.__settings === 'object') {
+      const target = global.__settings;
+      const keys = Object.keys(target);
+      for (const key of keys) {
+        delete target[key];
+      }
+      Object.assign(target, config);
+      global.__settingsPath = resolvedPath;
+      return target;
+    }
+
     global.__settings = config;
     global.__settingsPath = resolvedPath;
     return config;

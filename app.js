@@ -56,6 +56,71 @@ const defaultthemesettings = {
 const DEFAULT_EXTRA_RESOURCES = { ram: 0, disk: 0, cpu: 0, servers: 0 };
 let cachedAfkScript = { key: null, code: "" };
 
+async function checkPterodactylConnection() {
+  if (!settings.pterodactyl || !settings.pterodactyl.domain) {
+    console.log(chalk.red("Pterodactyl config is missing (domain/key)."));
+    return false;
+  }
+
+  const applicationKey =
+    settings.pterodactyl.application_key || settings.pterodactyl.key;
+
+  if (!applicationKey) {
+    console.log(chalk.red("Pterodactyl application key is missing."));
+    return false;
+  }
+
+  const base =
+    settings.pterodactyl.domain.slice(-1) === "/"
+      ? settings.pterodactyl.domain.slice(0, -1)
+      : settings.pterodactyl.domain;
+
+  try {
+    const response = await fetch(`${base}/api/application/users?per_page=1`, {
+      method: "get",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${applicationKey}`,
+      },
+    });
+    const contentType = response.headers.get("content-type") || "";
+    const body = await response.text();
+
+    if (!response.ok || !contentType.includes("application/json")) {
+      console.log(
+        chalk.red("Pterodactyl API check failed. Verify domain and API key.")
+      );
+      console.log(
+        chalk.red(
+          `Status ${response.status}, content-type ${contentType || "unknown"}.`
+        )
+      );
+      if (contentType.includes("text/html")) {
+        console.log(
+          chalk.red(
+            "Panel returned HTML. This usually means the API key is invalid or not an Application key (ptla_...)."
+          )
+        );
+      }
+      return false;
+    }
+
+    try {
+      JSON.parse(body);
+    } catch (error) {
+      console.log(chalk.red("Pterodactyl API response was not valid JSON."));
+      return false;
+    }
+  } catch (error) {
+    console.log(chalk.red("Pterodactyl API check failed to connect."));
+    console.error(error);
+    return false;
+  }
+
+  console.log(chalk.green("Pterodactyl API connection verified."));
+  return true;
+}
+
 function buildAfkScript() {
   if (!settings?.api?.afk) return "";
 
@@ -427,8 +492,12 @@ if (cluster.isMaster) {
 
 settingsStore
   .init(db, "./config.yaml")
-  .then(() => {
+  .then(async () => {
     settingsStore.startAutoRefresh(db);
+    const ok = await checkPterodactylConnection();
+    if (!ok) {
+      process.exit(1);
+    }
     startCluster();
   })
   .catch((error) => {

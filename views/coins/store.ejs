@@ -18,6 +18,68 @@
                 </div>
               </div>
             </div>
+
+            <% const planEntries = Object.entries(settings.api.client.packages.list || {}); %>
+            <% const currentPlan = packagename || settings.api.client.packages.default || null; %>
+            <% if (planEntries.length) { %>
+              <h3 class="text-lg font-medium text-white mb-5">Plans</h3>
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full mb-10">
+                <% planEntries.forEach(([name, plan]) => { %>
+                  <% const rawCost = parseFloat(plan.cost); %>
+                  <% const cost = Number.isFinite(rawCost) ? rawCost : null; %>
+                  <% const isCurrent = currentPlan === name; %>
+                  <% const canBuy = cost !== null && !isCurrent; %>
+                  <% const highlightClass = plan.highlight ? 'border border-sky-500/30 shadow-sm shadow-sky-500/10' : 'border border-neutral-800/70 shadow-sm'; %>
+                  <div class="bg-neutral-900 rounded-sm overflow-hidden <%= highlightClass %> transition-all duration-300 flex flex-col h-full">
+                    <div class="p-5">
+                      <div class="flex items-center justify-between mb-2">
+                        <p class="text-[0.65rem] uppercase tracking-[0.35em] text-slate-500">Plan</p>
+                        <% if (isCurrent) { %>
+                          <span class="text-[0.65rem] uppercase tracking-[0.2em] text-emerald-400">Current</span>
+                        <% } %>
+                      </div>
+                      <h4 class="font-semibold text-white text-base mb-2"><%= name %></h4>
+                      <% if (plan.description) { %>
+                        <p class="text-xs text-slate-400 mb-3"><%= plan.description %></p>
+                      <% } %>
+                      <div class="grid grid-cols-2 gap-2 text-xs text-slate-400">
+                        <div class="flex items-center justify-between">
+                          <span>RAM</span>
+                          <span class="text-white"><%= plan.ram %> MB</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                          <span>CPU</span>
+                          <span class="text-white"><%= plan.cpu %>%</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                          <span>Disk</span>
+                          <span class="text-white"><%= plan.disk %> MB</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                          <span>Servers</span>
+                          <span class="text-white"><%= plan.servers %></span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="mt-auto p-3 bg-neutral-950/60 border-t border-neutral-800 flex items-center justify-between">
+                      <span class="text-xs text-slate-300">
+                        <% if (cost === null) { %>
+                          Not for sale
+                        <% } else { %>
+                          <%= cost %> <%= settings.website.coins %>
+                        <% } %>
+                      </span>
+                      <% const buttonClass = canBuy ? 'bg-sky-500 hover:bg-sky-400' : 'bg-slate-800 cursor-not-allowed opacity-50'; %>
+                      <% const buttonText = isCurrent ? 'Current Plan' : (cost === null ? 'Unavailable' : 'Buy Plan'); %>
+                      <% const buttonLink = canBuy ? `/buy-plan?plan=${encodeURIComponent(name)}` : 'javascript:void(0)'; %>
+                      <a href="<%= buttonLink %>" class="inline-flex justify-center items-center rounded-sm <%= buttonClass %> px-3 py-1.5 text-xs font-medium text-white transition-colors">
+                        <%= buttonText %>
+                      </a>
+                    </div>
+                  </div>
+                <% }) %>
+              </div>
+            <% } %>
             
             <h3 class="text-lg font-medium text-white mb-5">Resource Packages</h3>
             <div id="packageList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full mb-10">

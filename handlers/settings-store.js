@@ -9,6 +9,20 @@ const settings = global.__settings || {};
 global.__settings = settings;
 
 let lastUpdatedAt = null;
+let fileSettingsCache = null;
+
+function normalizePterodactylKeys(nextSettings) {
+  if (!nextSettings || !nextSettings.pterodactyl) return;
+  if (!nextSettings.pterodactyl.application_key && nextSettings.pterodactyl.key) {
+    nextSettings.pterodactyl.application_key = nextSettings.pterodactyl.key;
+  }
+  if (!nextSettings.pterodactyl.client_key && nextSettings.pterodactyl.client) {
+    nextSettings.pterodactyl.client_key = nextSettings.pterodactyl.client;
+  }
+  if (!nextSettings.pterodactyl.key && nextSettings.pterodactyl.application_key) {
+    nextSettings.pterodactyl.key = nextSettings.pterodactyl.application_key;
+  }
+}
 
 function applySettings(nextSettings) {
   const snapshot =
@@ -20,6 +34,7 @@ function applySettings(nextSettings) {
     delete settings[key];
   }
   Object.assign(settings, snapshot);
+  normalizePterodactylKeys(settings);
 }
 
 function isObject(value) {
@@ -38,6 +53,41 @@ function mergeDeep(target, source) {
     }
   }
   return output;
+}
+
+function removePath(target, path) {
+  let cursor = target;
+  for (let i = 0; i < path.length - 1; i++) {
+    if (!cursor || typeof cursor !== "object") return;
+    cursor = cursor[path[i]];
+  }
+  if (cursor && typeof cursor === "object") {
+    delete cursor[path[path.length - 1]];
+  }
+}
+
+function scrubSensitive(source) {
+  const clone = JSON.parse(JSON.stringify(source || {}));
+  const paths = [
+    ["pterodactyl", "application_key"],
+    ["pterodactyl", "key"],
+    ["pterodactyl", "client_key"],
+    ["pterodactyl", "client"],
+    ["website", "secret"],
+    ["api", "client", "api", "code"],
+    ["api", "client", "oauth2", "secret"],
+    ["api", "client", "bot", "token"],
+    ["api", "client", "google", "clientSecret"],
+    ["api", "client", "google", "jwtSecret"],
+    ["antivpn", "APIKey"],
+    ["logging", "webhook"],
+  ];
+
+  for (const path of paths) {
+    removePath(clone, path);
+  }
+
+  return clone;
 }
 
 async function fetchPaged(url, headers) {
@@ -97,6 +147,7 @@ function normalizeEggEntry(existing, payload) {
   const maximum = existing?.maximum || { ram: 0, disk: 0, cpu: 0 };
 
   return {
+    enabled: existing?.enabled === true,
     display: existing?.display || payload.name || `Egg ${payload.id}`,
     icon: existing?.icon || "",
     pro: existing?.pro === true,
@@ -114,13 +165,17 @@ function normalizeEggEntry(existing, payload) {
 }
 
 async function syncEggsFromPanel(db, { force = false } = {}) {
-  if (!settings.pterodactyl || !settings.pterodactyl.domain || !settings.pterodactyl.key) {
+  const applicationKey =
+    settings.pterodactyl &&
+    (settings.pterodactyl.application_key || settings.pterodactyl.key);
+
+  if (!settings.pterodactyl || !settings.pterodactyl.domain || !applicationKey) {
     return { ok: false, reason: "missing-panel-config" };
   }
 
   const baseUrl = settings.pterodactyl.domain.replace(/\/$/, "");
   const headers = {
-    Authorization: `Bearer ${settings.pterodactyl.key}`,
+    Authorization: `Bearer ${applicationKey}`,
     "Content-Type": "application/json",
     Accept: "application/json",
   };
@@ -160,7 +215,7 @@ async function syncEggsFromPanel(db, { force = false } = {}) {
   if (!settings.api.client) settings.api.client = {};
   settings.api.client.eggs = eggsByKey;
 
-  await db.set(SETTINGS_KEY, settings);
+  await db.set(SETTINGS_KEY, scrubSensitive(settings));
   await db.set(SETTINGS_UPDATED_KEY, Date.now());
 
   return { ok: true, count: Object.keys(eggsByKey).length, forced: force };
@@ -169,13 +224,16 @@ async function syncEggsFromPanel(db, { force = false } = {}) {
 async function init(db, filePath) {
   const rawContent = fs.readFileSync(filePath, "utf8");
   const fileSettings = yaml.load(rawContent) || {};
+  fileSettingsCache = fileSettings;
   applySettings(fileSettings);
 
   const storedSettings = await db.get(SETTINGS_KEY);
   if (storedSettings && typeof storedSettings === "object") {
     applySettings(mergeDeep(fileSettings, storedSettings));
+    await db.set(SETTINGS_KEY, scrubSensitive(settings));
+    await db.set(SETTINGS_UPDATED_KEY, Date.now());
   } else {
-    await db.set(SETTINGS_KEY, settings);
+    await db.set(SETTINGS_KEY, scrubSensitive(settings));
     await db.set(SETTINGS_UPDATED_KEY, Date.now());
   }
 
@@ -194,7 +252,7 @@ async function init(db, filePath) {
 
 async function save(db, nextSettings) {
   applySettings(nextSettings);
-  await db.set(SETTINGS_KEY, settings);
+  await db.set(SETTINGS_KEY, scrubSensitive(settings));
   await db.set(SETTINGS_UPDATED_KEY, Date.now());
 }
 
@@ -204,7 +262,10 @@ async function refreshIfUpdated(db) {
 
   const storedSettings = await db.get(SETTINGS_KEY);
   if (storedSettings && typeof storedSettings === "object") {
-    applySettings(storedSettings);
+    const merged = fileSettingsCache
+      ? mergeDeep(fileSettingsCache, storedSettings)
+      : storedSettings;
+    applySettings(merged);
     lastUpdatedAt = updatedAt;
     return true;
   }

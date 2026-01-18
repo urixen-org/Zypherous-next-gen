@@ -41,7 +41,7 @@ module.exports.load = async function (app, db) {
         method: "patch",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${settings.pterodactyl.key}`,
+          Authorization: `Bearer ${settings.pterodactyl.application_key || settings.pterodactyl.key}`,
         },
         body: JSON.stringify({
           username: req.session.pterodactyl.username,

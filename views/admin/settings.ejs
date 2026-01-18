@@ -340,6 +340,7 @@
             <tr>
               <th class="px-3 py-2 text-left">Display</th>
               <th class="px-3 py-2 text-left">Egg ID</th>
+              <th class="px-3 py-2 text-left">Enabled</th>
               <th class="px-3 py-2 text-left">Admin Only</th>
               <th class="px-3 py-2 text-left">Pro</th>
               <th class="px-3 py-2 text-left">Min RAM</th>
@@ -359,6 +360,9 @@
                   <input class="w-40 rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-xs text-white" data-field="display" value="<%= egg.display || key %>">
                 </td>
                 <td class="px-3 py-2 text-xs text-slate-400"><%= egg.info && egg.info.egg ? egg.info.egg : '-' %></td>
+                <td class="px-3 py-2">
+                  <input type="checkbox" data-field="enabled" <%= egg.enabled ? 'checked' : '' %>>
+                </td>
                 <td class="px-3 py-2">
                   <input type="checkbox" data-field="adminOnly" <%= egg.adminOnly ? 'checked' : '' %>>
                 </td>
@@ -405,21 +409,23 @@
         <button type="button" class="text-sm text-slate-400 hover:text-white" onclick="closeModal('packagesModal')">Close</button>
       </div>
       <div class="space-y-4">
-        <div class="grid grid-cols-5 gap-3 text-xs text-slate-400">
+        <div class="grid grid-cols-6 gap-3 text-xs text-slate-400">
           <span>Plan</span>
           <span>RAM</span>
           <span>Disk</span>
           <span>CPU</span>
           <span>Servers</span>
+          <span>Cost</span>
         </div>
         <% Object.entries(settings.api.client.packages.list || {}).forEach(([name, pkg]) => { %>
-          <div class="grid grid-cols-5 gap-3 items-center text-xs" data-package-name="<%= name %>">
+          <div class="grid grid-cols-6 gap-3 items-center text-xs" data-package-name="<%= name %>">
             <input class="rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-white" data-field="name" value="<%= name %>" readonly>
             <input class="rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-white" data-field="ram" value="<%= pkg.ram %>">
             <input class="rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-white" data-field="disk" value="<%= pkg.disk %>">
             <input class="rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-white" data-field="cpu" value="<%= pkg.cpu %>">
+            <input class="rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-white" data-field="servers" value="<%= pkg.servers %>">
             <div class="flex items-center gap-2">
-              <input class="w-20 rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-white" data-field="servers" value="<%= pkg.servers %>">
+              <input class="w-24 rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-white" data-field="cost" value="<%= typeof pkg.cost !== 'undefined' ? pkg.cost : 0 %>">
               <button class="rounded-sm border border-neutral-800 bg-white/5 px-2 py-1 text-xs text-white hover:bg-white/10" onclick="savePackage('<%= name %>')">Save</button>
               <button class="rounded-sm border border-neutral-800 bg-red-500/10 px-2 py-1 text-xs text-red-300 hover:bg-red-500/20" onclick="deletePackage('<%= name %>')">Delete</button>
               <span class="text-xs text-slate-500" data-status></span>
@@ -428,13 +434,14 @@
         <% }) %>
         <div class="border-t border-neutral-800 pt-4">
           <h4 class="text-sm font-semibold text-white mb-2">Add Plan</h4>
-          <div class="grid grid-cols-5 gap-3 items-center text-xs" id="packageAddRow">
+          <div class="grid grid-cols-6 gap-3 items-center text-xs" id="packageAddRow">
             <input class="rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-white" data-field="name" placeholder="name">
             <input class="rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-white" data-field="ram" placeholder="ram">
             <input class="rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-white" data-field="disk" placeholder="disk">
             <input class="rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-white" data-field="cpu" placeholder="cpu">
+            <input class="rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-white" data-field="servers" placeholder="servers">
             <div class="flex items-center gap-2">
-              <input class="w-20 rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-white" data-field="servers" placeholder="servers">
+              <input class="w-24 rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-white" data-field="cost" placeholder="cost">
               <button class="rounded-sm border border-neutral-800 bg-white/5 px-2 py-1 text-xs text-white hover:bg-white/10" onclick="addPackage()">Add</button>
               <span class="text-xs text-slate-500" data-status></span>
             </div>
@@ -479,6 +486,7 @@
       const updates = {
         display: row.querySelector('[data-field="display"]').value,
         icon: row.querySelector('[data-field="icon"]').value,
+        enabled: row.querySelector('[data-field="enabled"]').checked,
         pro: row.querySelector('[data-field="pro"]').checked,
         adminOnly: row.querySelector('[data-field="adminOnly"]').checked,
         minimum: {
@@ -510,6 +518,7 @@
         disk: row.querySelector('[data-field="disk"]').value,
         cpu: row.querySelector('[data-field="cpu"]').value,
         servers: row.querySelector('[data-field="servers"]').value,
+        cost: row.querySelector('[data-field="cost"]').value,
       };
       const status = row.querySelector("[data-status]");
       const response = await fetch("/admin/settings/packages/update", {
@@ -545,6 +554,7 @@
         disk: row.querySelector('[data-field="disk"]').value,
         cpu: row.querySelector('[data-field="cpu"]').value,
         servers: row.querySelector('[data-field="servers"]').value,
+        cost: row.querySelector('[data-field="cost"]').value,
       };
       const status = row.querySelector("[data-status]");
       const response = await fetch("/admin/settings/packages/update", {

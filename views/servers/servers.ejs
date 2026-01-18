@@ -80,6 +80,8 @@
           <% } else { %>
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               <% for (let i = 0, len = pterodactyl.relationships.servers.data.length; i < len; i++) { %>
+                <% const serverAttrs = pterodactyl.relationships.servers.data[i].attributes; %>
+                <% const serverIdentifier = serverAttrs.identifier; %>
                 <div class="bg-neutral-900 rounded-sm overflow-hidden border-t border-neutral-800/70 shadow-sm hover:shadow-sm transition-all duration-200 group flex flex-col">
                   <div class="p-6 pb-4">
                     <div class="flex items-start justify-between mb-4">
@@ -100,32 +102,26 @@
                         </span>
                       </div>
                     </div>
-                    <h3 class="text-xl font-medium text-white line-clamp-1"><%= pterodactyl.relationships.servers.data[i].attributes.name %></h3>
-                    <p class="text-sm text-slate-400 mt-2"><%= pterodactyl.relationships.servers.data[i].attributes.identifier %></p>
+                    <h3 class="text-xl font-medium text-white line-clamp-1"><%= serverAttrs.name %></h3>
+                    <p class="text-sm text-slate-400 mt-2"><%= serverAttrs.identifier || "Unknown" %></p>
                   </div>
                   
                   <div class="mt-auto p-4 bg-neutral-950/60 border-t border-neutral-800/70">
                     <div class="flex space-x-3">
-                      <a href="../edit?id=<%= pterodactyl.relationships.servers.data[i].attributes.id %>" class="flex-1 inline-flex justify-center items-center rounded-sm bg-sky-500 px-3 py-2 text-sm font-medium text-white hover:bg-sky-400 transition-colors">
+                      <a href="../edit?id=<%= serverAttrs.id %>" class="flex-1 inline-flex justify-center items-center rounded-sm bg-sky-500 px-3 py-2 text-sm font-medium text-white hover:bg-sky-400 transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 mr-1.5">
                           <path d="m5.433 13.917 1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65Z" />
                           <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5Z" />
                         </svg>
                         Edit
                       </a>
-                      <a href="../delete?id=<%= pterodactyl.relationships.servers.data[i].attributes.id %>" class="flex-1 inline-flex justify-center items-center rounded-sm bg-white/5 px-3 py-2 text-sm font-medium text-white hover:bg-white/10 transition-colors">
+                      <a href="../delete?id=<%= serverAttrs.id %>" class="flex-1 inline-flex justify-center items-center rounded-sm bg-white/5 px-3 py-2 text-sm font-medium text-white hover:bg-white/10 transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 mr-1.5">
                           <path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5z" clip-rule="evenodd" />
                         </svg>
                         Delete
                       </a>
-                      <a href="/dashboard/server/<%= pterodactyl.relationships.servers.data[i].attributes.id %>" class="flex-1 inline-flex justify-center items-center rounded-sm bg-slate-800/70 px-3 py-2 text-sm font-medium text-white hover:bg-slate-700 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-4 h-4 mr-1.5">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M3 12h18m-6-6 6 6-6 6" />
-                        </svg>
-                        Manage
-                      </a>
-                      <a href="<%= settings.pterodactyl.domain %>/server/<%= pterodactyl.relationships.servers.data[i].attributes.identifier %>" class="flex-1 inline-flex justify-center items-center rounded-sm bg-white/5 px-3 py-2 text-sm font-medium text-white hover:bg-white/10 transition-colors">
+                      <a href="<%= settings.pterodactyl.domain %>/server/<%= serverIdentifier %>" class="flex-1 inline-flex justify-center items-center rounded-sm bg-white/5 px-3 py-2 text-sm font-medium text-white hover:bg-white/10 transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 mr-1.5">
                           <path fill-rule="evenodd" d="M4.25 5.5a.75.75 0 0 0-.75.75v8.5c0 .414.336.75.75.75h8.5a.75.75 0 0 0 .75-.75v-4a.75.75 0 0 1 1.5 0v4A2.25 2.25 0 0 1 12.75 17h-8.5A2.25 2.25 0 0 1 2 14.75v-8.5A2.25 2.25 0 0 1 4.25 4h5a.75.75 0 0 1 0 1.5h-5Z" clip-rule="evenodd" />
                           <path fill-rule="evenodd" d="M6.194 12.753a.75.75 0 0 0 1.06.053L16.5 4.44v2.81a.75.75 0 0 0 1.5 0v-4.5a.75.75 0 0 0-.75-.75h-4.5a.75.75 0 0 0 0 1.5h2.553l-9.056 8.194a.75.75 0 0 0-.053 1.06Z" clip-rule="evenodd" />

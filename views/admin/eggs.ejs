@@ -58,7 +58,8 @@
                 <div class="bg-neutral-900/60 rounded-sm border border-neutral-800 p-4 shadow-sm" data-egg-key="<%= key %>">
                   <div class="flex items-center justify-between mb-3">
                     <div>
-                      <h3 class="text-sm font-semibold text-white"><%= egg.display || key %></h3>
+                      <p class="text-[0.65rem] uppercase tracking-[0.35em] text-slate-500">Egg</p>
+                      <h3 class="text-sm font-semibold text-white mt-1"><%= egg.display || key %></h3>
                       <p class="text-xs text-slate-500">ID: <%= egg.info && egg.info.egg ? egg.info.egg : '-' %></p>
                     </div>
                     <span class="text-xs text-slate-400">&lt;<%= key %>&gt;</span>
@@ -74,6 +75,10 @@
                         <input class="w-full rounded-sm border border-neutral-800 bg-neutral-950 px-2 py-1 text-xs text-white" data-field="icon" value="<%= egg.icon || '' %>">
                       </div>
                       <div class="flex items-center gap-3 text-xs">
+                        <label class="flex items-center gap-2">
+                          <input type="checkbox" data-field="enabled" <%= egg.enabled ? 'checked' : '' %>>
+                          <span>Enabled</span>
+                        </label>
                         <label class="flex items-center gap-2">
                           <input type="checkbox" data-field="adminOnly" <%= egg.adminOnly ? 'checked' : '' %>>
                           <span>Admin Only</span>
@@ -135,6 +140,7 @@
       const updates = {
         display: row.querySelector('[data-field="display"]').value,
         icon: row.querySelector('[data-field="icon"]').value,
+        enabled: row.querySelector('[data-field="enabled"]').checked,
         pro: row.querySelector('[data-field="pro"]').checked,
         adminOnly: row.querySelector('[data-field="adminOnly"]').checked,
         minimum: {
